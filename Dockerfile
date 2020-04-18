@@ -7,7 +7,7 @@ COPY kernel /tmp/kernel
 SHELL ["/bin/bash", "-c"]
 
 RUN buildDeps='software-properties-common git libtool cmake python-dev python3-pip python-pip libseccomp-dev wget curl zip' && \
-    apt-get update && apt-get install -y python python3 python-pkg-resources python3-pkg-resources gcc g++ $buildDeps
+    apt-get update && apt-get install -y python python3 python-pkg-resources python3-pkg-resources gcc g++ socat $buildDeps
 
 RUN add-apt-repository ppa:openjdk-r/ppa && apt-get update && apt-get install -y openjdk-8-jdk
 
