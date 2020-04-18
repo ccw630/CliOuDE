@@ -31,7 +31,7 @@ RUN pip3 install --no-cache-dir psutil gunicorn flask requests && \
     apt-get purge -y --auto-remove $buildDeps && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /root/.sdkman && \
     mkdir -p /code && \
-    useradd -u 12001 compiler && useradd -u 12002 code && usermod -a -G code
+    useradd -u 12001 compiler && useradd -u 12002 code
 
 HEALTHCHECK --interval=5s --retries=3 CMD python3 /code/service.py
 ADD server /code
