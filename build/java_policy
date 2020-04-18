@@ -1,0 +1,6 @@
+grant {
+    permission java.io.FilePermission "/tmp", "read";
+    permission java.util.PropertyPermission "scala.*", "read";
+    permission java.lang.RuntimePermission "*", "read";
+    permission java.lang.reflect.ReflectPermission "*", "read";
+};

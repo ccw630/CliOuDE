@@ -1,0 +1,6 @@
+.vscode/
+
+kernel/build/
+output/
+
+.DS_Store
