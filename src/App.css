@@ -1,38 +1,52 @@
-.App {
+:root {
+  --main-border-colour: #ddd;
+  --primary-background-colour: #f8f8f8;
+  --secondary-background-colour: #ececec;
+  --primary-brand-colour: #333333;
+}
+
+html, body, #root, .ant-layout, .ant-layout-content {
+  height: 100%;
+}
+
+#sourceEditor {
+  border-bottom: 1px solid var(--main-border-colour);
+  min-height: 400px;
+  height: 60%;
+}
+
+#inputLabel, #outputLabel {
+  padding: 5px 15px;
+  font-size: 18px;
+}
+
+#inputLabel {
+  border-right: 1px solid var(--main-border-colour);
+}
+
+#inputEditor, #outputEditor {
+  min-height: 300px;
+  height: 40%;
+}
+
+#inputEditor {
+  border-right: 1px solid var(--main-border-colour);
+  padding-left: 0px;
+}
+
+.right {
+  float: right;
+  vertical-align: middle;
+  color: #777;
+  line-height: 48px;
+}
+
+.logo {
+  height: 30px;
+  line-height: 30px;
+  margin: 9px 24px 9px 0;
+  float: left;
+  color: aliceblue !important;
   text-align: center;
-}
-
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
-}
-
-.App-link {
-  color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  font-size: 21px;
 }
