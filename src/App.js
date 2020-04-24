@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Layout, Row, Col, Switch, Typography, Badge, Space, Select, Button } from 'antd'
-import { FileTextOutlined, CodeOutlined, CaretRightOutlined } from '@ant-design/icons'
+import { FileTextOutlined, CodeOutlined, CaretRightOutlined, ReloadOutlined } from '@ant-design/icons'
 import Editor from './editor/editor'
 import './App.css'
 import 'antd/dist/antd.css';
@@ -55,37 +55,47 @@ const languageCodeMap = {
   'JavaScript': 'console.log("hello, world")\n'
 }
 
+const sourceEditor = React.createRef()
+const inputEditor = React.createRef()
+const outputEditor = React.createRef()
+
 function App() {
-  const [execStatus, setExecStatus] = useState(-2)
-  const [needInput, setNeedInput] = useState(true)
-  const [language, setLanguage] = useState('C++')
-  const [code, setCode] = useState(languageCodeMap[language])
   const wide = document.documentElement.clientWidth >= 768
+  const [execStatus, setExecStatus] = useState(-2)
+  const [needInput, setNeedInput] = useState(wide)
+  const [language, setLanguage] = useState(localStorage.getItem('CLIOUDE_LANG') || 'C++')
+  const [code, setCode] = useState(localStorage.getItem('CLIOUDE_CODE') || languageCodeMap[language])
 
   const handleRun = (e) => {
+    const code = sourceEditor.current.getValue()
+    localStorage.setItem('CLIOUDE_CODE', code)
+    outputEditor.current.appendValue('output')
     console.log(code)
   }
 
   return (
     <Layout>
       <Header style={{ height: 48 }}>
-        <div className="logo">
+        <Space className="logo">
           Clioude
-        </div>
+          {wide && <Button type="link" ghost onClick={() => sourceEditor.current.setValue(languageCodeMap[language])}>
+            <ReloadOutlined />
+          </Button>}
+        </Space>
         <div className="right">
           <Space>
             <Select
               value={language}
-              style={{ width: 330 }}
+              style={{ width: wide ? 330 : 120 }}
               onChange={value => {
                 setLanguage(value)
-                setCode(languageCodeMap[value])
+                localStorage.setItem('CLIOUDE_LANG', value)
               }}
             >
               {Object.keys(languageDescMap).map(k => <Option value={k}>{languageDescMap[k]}</Option>)}
             </Select>
-            <Button type="primary" icon={<CaretRightOutlined />}>
-              运行(Alt + R)
+            <Button type="primary" icon={<CaretRightOutlined />} onClick={handleRun}>
+              {wide && "运行(Alt + R)"}
             </Button>
           </Space>
         </div>
@@ -96,6 +106,7 @@ function App() {
             language={languageModeMap[language]}
             code={code}
             handleRun={handleRun}
+            ref={sourceEditor}
           />
         </div>
         <Row>
@@ -136,6 +147,7 @@ function App() {
                 <Editor
                   language="plaintext"
                   handleRun={handleRun}
+                  ref={inputEditor}
                 />
               </div>
             </Col>
@@ -146,6 +158,7 @@ function App() {
                   code="output"
                   readOnly={true}
                   handleRun={handleRun}
+                  ref={outputEditor}
                 />
               </div>
             </Col>
