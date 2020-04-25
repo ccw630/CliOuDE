@@ -58,6 +58,8 @@ const languageCodeMap = {
 const sourceEditor = React.createRef()
 const inputEditor = React.createRef()
 const outputEditor = React.createRef()
+const consoleEditor = React.createRef()
+let time = 0
 
 function App() {
   const wide = document.documentElement.clientWidth >= 768
@@ -69,7 +71,8 @@ function App() {
   const handleRun = (e) => {
     const code = sourceEditor.current.getValue()
     localStorage.setItem('CLIOUDE_CODE', code)
-    outputEditor.current.appendValue('output')
+    outputEditor.current && outputEditor.current.appendValue(`output${++time}\n`)
+    consoleEditor.current && consoleEditor.current.appendValue(`output${++time}\n`)
     console.log(code)
   }
 
@@ -155,7 +158,6 @@ function App() {
               <div id="outputEditor">
                 <Editor
                   language="plaintext"
-                  code="output"
                   readOnly={true}
                   handleRun={handleRun}
                   ref={outputEditor}
@@ -166,9 +168,8 @@ function App() {
           {!needInput && <Col span={24}>
             <div id="outputEditor">
               <Editor
+                ref={consoleEditor}
                 language="plaintext"
-                code={"output"+needInput}
-                readOnly={needInput}
                 handleRun={handleRun}
               />
             </div>
