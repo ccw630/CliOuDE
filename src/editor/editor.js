@@ -9,11 +9,13 @@ class Editor extends React.Component {
     this.state = {
       value: props.code || '',
       runFunc: props.handleRun,
+      sendInput: props.sendInput,
       lastPos : { line: 1, column: 1 },
       undo: false,
       input: '',
       readOnly: props.readOnly || false,
-      appending: false
+      appending: false,
+      isSourceEditor: props.isSourceEditor || false
     }
   }
 
@@ -36,8 +38,10 @@ class Editor extends React.Component {
     editor.focus()
   }
 
+  reformat = () => this.editor.trigger('', 'editor.action.formatDocument')
   getValue = () => this.editor.getValue()
   setValue = (value) => this.editor.setValue(value)
+  clear = () => this.setValue('')
   appendValue = (text) => {
     const range = new monaco.Range(
         this.state.lastPos.line,
@@ -55,7 +59,7 @@ class Editor extends React.Component {
   }
   
   onChange = (newValue, e) => {
-    console.log(this.state, newValue, e)
+    if (this.state.isSourceEditor) return
     const invalid = e.changes.some(x => !this.state.appending && x.range && (this.invalidPosition(x.range.startLineNumber, x.range.startColumn) || this.state.readOnly))
     if (e.isUndoing && !this.state.appending && invalid) {
       this.setState({ appending: true }, () => this.editor.trigger('', 'redo'))
@@ -63,8 +67,10 @@ class Editor extends React.Component {
       this.setState({ appending: true }, () => this.editor.trigger('', 'undo'))
     } else {
       if (!this.state.appending && e.changes.some(x => x.text === '\n')) {
-        this.setState({ lastPos: { line: this.editor.getModel().getLineCount(), column: 1 }})
-        this.state.runFunc()
+        const endColumn = 1, endLineNumber = this.editor.getModel().getLineCount()
+        const startColumn = this.state.lastPos.column, startLineNumber = this.state.lastPos.line
+        this.state.sendInput(this.editor.getModel().getValueInRange({ endColumn, endLineNumber, startColumn, startLineNumber }))
+        this.setState({ lastPos: { line: endLineNumber, column: endColumn }})
       }
       this.setState({ appending: false })
     }
