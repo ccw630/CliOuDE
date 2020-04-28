@@ -7,7 +7,7 @@ from exception import WorkerServiceError
 from utils import server_info, logger, token
 
 
-class WorkerService(object):
+class WorkerService:
     def __init__(self):
         self.service_url = os.environ["SERVICE_URL"]
         self.backend_url = os.environ["BACKEND_URL"]
