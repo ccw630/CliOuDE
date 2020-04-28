@@ -8,10 +8,6 @@ class CompileError(WorkerException):
     pass
 
 
-class TokenVerificationFailed(WorkerException):
-    pass
-
-
 class WorkerServiceError(WorkerException):
     pass
 
