@@ -1,4 +1,5 @@
 export const statusMap = {
+  '-3': 'error',
   '-2': 'default',
   '-1': 'processing',
   '0': 'success',
@@ -10,6 +11,7 @@ export const statusMap = {
 }
 
 export const statusDescMap = {
+  '-3': '编译错误 - Compile Error',
   '-2': '暂无输出 - NULL',
   '-1': '运行中 - Running',
   '0': '运行成功 - Success',
