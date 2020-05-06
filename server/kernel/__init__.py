@@ -1,9 +1,10 @@
 import json
-import subprocess
+import asyncio
 
 UNLIMITED = -1
 VERSION = 0x000001
 
+RESULT_COMPILE_ERROR = -3
 RESULT_SUCCESS = 0
 RESULT_CPU_TIME_LIMIT_EXCEEDED = 1
 RESULT_REAL_TIME_LIMIT_EXCEEDED = 2
@@ -24,23 +25,23 @@ ERROR_EXECVE_FAILED = -10
 ERROR_SOCK_CONNECT_FAILED = -11
 
 
-def run(max_cpu_time,
-        max_real_time,
-        max_memory,
-        max_stack,
-        max_output_size,
-        max_process_number,
-        exe_path,
-        input_path,
-        output_path,
-        error_path,
-        args,
-        env,
-        log_path,
-        seccomp_rule_name,
-        uid,
-        gid,
-        memory_limit_check_only=0):
+async def run(max_cpu_time,
+              max_real_time,
+              max_memory,
+              max_stack,
+              max_output_size,
+              max_process_number,
+              exe_path,
+              input_path,
+              output_path,
+              error_path,
+              args,
+              env,
+              log_path,
+              seccomp_rule_name,
+              uid,
+              gid,
+              memory_limit_check_only=0):
     str_list_vars = ["args", "env"]
     int_vars = ["max_cpu_time", "max_real_time",
                 "max_memory", "max_stack", "max_output_size",
@@ -76,8 +77,8 @@ def run(max_cpu_time,
     if seccomp_rule_name:
         proc_args.append("--seccomp_rule={}".format(seccomp_rule_name))
 
-    proc = subprocess.Popen(proc_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    out, err = proc.communicate()
+    proc = await asyncio.create_subprocess_exec(proc_args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+    out, err = await proc.communicate()
     if err:
         raise ValueError("Error occurred while calling kernel: {}".format(err))
     return json.loads(out.decode("utf-8"))

@@ -1,12 +1,14 @@
 import asyncio
 import os
 import shutil
-import time
+import json
 
 import tornado.web
 import tornado.websocket
 import tornado.httpserver
 import tornado.ioloop
+
+from aiofile import AIOFile
 
 from compiler import Compiler
 from config import (COMPILER_USER_UID, IO_SOCK_DIR, RUN_GROUP_GID,
@@ -58,43 +60,37 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
     def __init__(self, *args, **kwargs):
         super(WebSocketHandler, self).__init__(*args, **kwargs)
         self.connected = False
+        self.started = False
         self.reader = None
         self.writer = None
 
 
-    def _compile(self, submission_dir, compile_config, run_config, src):
+    async def _compile(self, submission_dir, compile_config, run_config, src):
         if compile_config:
             src_path = os.path.join(submission_dir, compile_config["src_name"])
 
             # write source code into file
-            with open(src_path, "w", encoding="utf-8") as f:
-                f.write(src)
+            async with AIOFile(src_path, "w", encoding="utf-8") as f:
+                await f.write(src)
 
             # compile source code, return exe file path
-            exe_path = Compiler().compile(compile_config=compile_config,
-                                          src_path=src_path,
-                                          output_dir=submission_dir)
+            exe_path = await Compiler().compile(compile_config=compile_config,
+                                                src_path=src_path,
+                                                output_dir=submission_dir)
         else:
             exe_path = os.path.join(submission_dir, run_config["exe_name"])
-            with open(exe_path, "w", encoding="utf-8") as f:
+            async with AIOFile(exe_path, "w", encoding="utf-8") as f:
                 f.write(src)
         return exe_path
 
 
-    def _run(self, language_config, src, max_cpu_time, max_real_time, max_memory, submission_id):
+    async def _run(self, language_config, src, max_cpu_time, max_real_time, max_memory, submission_id):
         # init
         compile_config = language_config.get("compile")
         run_config = language_config["run"]
         # 等待 io sock 的建立
-        wait = 10
         io_sock_path = os.path.join(IO_SOCK_DIR, submission_id)
-        while wait:
-            if not os.path.exists(io_sock_path):
-                time.sleep(1)
-                wait -= 1
-            else:
-                break
-        else:
+        if not os.path.exists(io_sock_path):
             raise ValueError("IO Sock not found")
 
         with InitSubmissionEnv(WORKER_WORKSPACE_BASE, submission_id=str(submission_id)) as submission_dir:
@@ -106,8 +102,9 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
                                          max_real_time=max_real_time,
                                          max_memory=max_memory,
                                          io_sock_path="unix:" + io_sock_path)
-            run_result = kernel_client.run()
+            run_result = await kernel_client.run()
             return run_result
+
 
     def check_origin(self, origin):
         return True
@@ -121,7 +118,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             data = await self.reader.read(100)
             if data:
                 message = data.decode()
-                self.write_message(message)
+                self.write_message(json.dumps({'type': 'output', 'data': message}))
 
 
     async def listen_socket(self, path):
@@ -140,15 +137,35 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         asyncio.create_task(self.listen_socket(data))
 
 
+    def _run_callback(self, future):
+        try:
+            self.write_message(json.dumps({'type': 'result', 'data': future.result()}))
+        except CompileError as e:
+            logger.exception(e)
+            self.write_message(json.dumps({'type': 'result', 'data': {'data': {'result': -3}, 'err': e.message}}))
+        except Exception as e:
+            logger.exception(e)
+            self.write_message(json.dumps({'type': 'result', 'data': {'data': {'result': 5}, 'err': e.__class__.__name__ + ": " + str(e)}}))
+        self.close(1000)
+
+
     async def on_message(self, message):
-        while not self.connected:
-            pass
-        self.writer.write(message.encode())
-        await self.writer.drain()
+        data = json.loads(message)
+        msg_type = data.get('type', None)
+        if msg_type == 'code' and not self.started:
+            runner = asyncio.create_task(self._run(**data['code']))
+            runner.add_done_callback(self._run_callback)
+            self.started = True
+        elif msg_type == 'input':
+            while not self.connected or not self.started:
+                await asyncio.sleep(0.1)
+            self.writer.write(data['data'].encode())
+            await self.writer.drain()
 
 
     def on_close(self):
         self.connected = False
+        self.started = False
         self.writer.close()
 
 

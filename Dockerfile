@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM ubuntu:20.04
 
 COPY build/java_policy /etc
 
@@ -6,10 +6,8 @@ COPY kernel /tmp/kernel
 
 SHELL ["/bin/bash", "-c"]
 
-RUN buildDeps='software-properties-common git libtool cmake python-dev python3-pip python-pip libseccomp-dev wget curl zip' && \
-    apt-get update && apt-get install -y python python3 python-pkg-resources python3-pkg-resources gcc g++ socat $buildDeps
-
-RUN add-apt-repository ppa:openjdk-r/ppa && apt-get update && apt-get install -y openjdk-8-jdk
+RUN buildDeps='software-properties-common git libtool cmake python-dev python3-pip libseccomp-dev wget curl zip' && \
+    apt-get update && apt-get install -y python python3 python-pkg-resources python3-pkg-resources gcc g++ socat openjdk-11-jdk $buildDeps
 
 RUN mkdir -p /etc/nodejs && cd /etc/nodejs && \
 	curl -sSL https://nodejs.org/dist/latest-v12.x/node-v12.16.2-linux-x64.tar.xz | tar x --xz --strip-components=1 && \
@@ -26,7 +24,7 @@ RUN	curl -s https://get.sdkman.io | bash && source /root/.sdkman/bin/sdkman-init
 
 RUN	cd /tmp && git clone --depth 1 https://github.com/pocmo/Python-Brainfuck.git && mv Python-Brainfuck /usr/bin/brainfuck
 
-RUN pip3 install --no-cache-dir psutil gunicorn flask requests && \
+RUN pip3 install --no-cache-dir psutil tornado aiofile requests && \
     cd /tmp/kernel && mkdir build && cd build && cmake .. && make && make install && \
     apt-get purge -y --auto-remove $buildDeps && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /root/.sdkman && \
