@@ -11,7 +11,7 @@ RUN buildDeps='software-properties-common git libtool cmake python-dev python3-p
     apt-get update && apt-get install -y python python3 python-pkg-resources python3-pkg-resources gcc g++ socat openjdk-11-jdk $buildDeps
 
 RUN mkdir -p /etc/nodejs && cd /etc/nodejs && \
-	curl -sSL https://nodejs.org/dist/latest-v12.x/node-v12.16.2-linux-x64.tar.xz | tar x --xz --strip-components=1 && \
+	curl -sSL https://nodejs.org/dist/latest-v12.x/node-v12.16.3-linux-x64.tar.xz | tar x --xz --strip-components=1 && \
 	ln -s /etc/nodejs/bin/node /usr/bin/node
 
 RUN	curl -s https://get.sdkman.io | bash && source /root/.sdkman/bin/sdkman-init.sh && \
