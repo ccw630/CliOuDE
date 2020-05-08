@@ -63,6 +63,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         self.started = False
         self.reader = None
         self.writer = None
+        self.scanner = None
 
 
     async def _compile(self, submission_dir, compile_config, run_config, src):
@@ -116,11 +117,12 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         self.connected = True
         async def check():
             while self.connected:
-                data = await self.reader.read(100)
+                await asyncio.sleep(0.1)
+                data = await self.reader.read(1024)
                 if data:
                     message = data.decode()
                     self.write_message(json.dumps({'type': 'output', 'data': message}))
-        asyncio.create_task(check())
+        self.scanner = asyncio.create_task(check())
 
 
     async def listen_socket(self, path):
@@ -135,6 +137,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         if self.request.headers.get('Sec-WebSocket-Protocol', None) != token:
             raise tornado.web.HTTPError(403)
 
+
     def open(self, data):
         asyncio.create_task(self.listen_socket(data))
 
@@ -148,7 +151,11 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         except Exception as e:
             logger.exception(e)
             self.write_message(json.dumps({'type': 'result', 'data': {'data': {'result': 5}, 'err': e.__class__.__name__ + ": " + str(e)}}))
-        self.close(1000)
+        async def delay_close():
+            await asyncio.sleep(2)
+            self.close(1000)
+        asyncio.create_task(delay_close())
+        self.started = False
 
 
     async def on_message(self, message):
@@ -167,8 +174,10 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
 
     def on_close(self):
         self.connected = False
-        self.started = False
-        self.writer.close()
+        if self.writer:
+            self.writer.close()
+        if self.scanner:
+            self.scanner.cancel()
 
 
 class Application(tornado.web.Application):
