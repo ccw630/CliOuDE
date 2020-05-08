@@ -77,7 +77,7 @@ async def run(max_cpu_time,
     if seccomp_rule_name:
         proc_args.append("--seccomp_rule={}".format(seccomp_rule_name))
 
-    proc = await asyncio.create_subprocess_exec(proc_args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+    proc = await asyncio.create_subprocess_exec(*proc_args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
     out, err = await proc.communicate()
     if err:
         raise ValueError("Error occurred while calling kernel: {}".format(err))

@@ -94,7 +94,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             raise ValueError("IO Sock not found")
 
         with InitSubmissionEnv(WORKER_WORKSPACE_BASE, submission_id=str(submission_id)) as submission_dir:
-            exe_path = self._compile(submission_dir, compile_config=compile_config, run_config=run_config, src=src)
+            exe_path = await self._compile(submission_dir, compile_config=compile_config, run_config=run_config, src=src)
 
             kernel_client = KernelClient(run_config=language_config["run"],
                                          exe_path=exe_path,
@@ -114,23 +114,25 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         self.reader = r
         self.writer = w
         self.connected = True
-        while self.connected:
-            data = await self.reader.read(100)
-            if data:
-                message = data.decode()
-                self.write_message(json.dumps({'type': 'output', 'data': message}))
+        async def check():
+            while self.connected:
+                data = await self.reader.read(100)
+                if data:
+                    message = data.decode()
+                    self.write_message(json.dumps({'type': 'output', 'data': message}))
+        asyncio.create_task(check())
 
 
     async def listen_socket(self, path):
         server = await asyncio.start_unix_server(
-            self.handle_connect, path)
+            self.handle_connect, os.path.join(IO_SOCK_DIR, path))
 
         async with server:
             await server.serve_forever()
 
 
     def get(self, data):
-        if self.request.headers.get('X-Worker-Server-Token', None) != token:
+        if self.request.headers.get('Sec-WebSocket-Protocol', None) != token:
             raise tornado.web.HTTPError(403)
 
     def open(self, data):
@@ -153,7 +155,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         data = json.loads(message)
         msg_type = data.get('type', None)
         if msg_type == 'code' and not self.started:
-            runner = asyncio.create_task(self._run(**data['code']))
+            runner = asyncio.create_task(self._run(**data['data']))
             runner.add_done_callback(self._run_callback)
             self.started = True
         elif msg_type == 'input':

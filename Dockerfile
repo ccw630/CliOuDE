@@ -8,7 +8,7 @@ COPY kernel /tmp/kernel
 SHELL ["/bin/bash", "-c"]
 
 RUN buildDeps='software-properties-common git libtool cmake python-dev python3-pip libseccomp-dev wget curl zip' && \
-    apt-get update && apt-get install -y python python3 python-pkg-resources python3-pkg-resources gcc g++ socat openjdk-11-jdk $buildDeps
+    apt-get update && apt-get install -y python python3 python-pkg-resources python3-pkg-resources gcc g++ socat openjdk-11-jdk vim $buildDeps
 
 RUN mkdir -p /etc/nodejs && cd /etc/nodejs && \
 	curl -sSL https://nodejs.org/dist/latest-v12.x/node-v12.16.3-linux-x64.tar.xz | tar x --xz --strip-components=1 && \

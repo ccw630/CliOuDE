@@ -5,4 +5,4 @@ mkdir -p /worker/run /worker/socks
 chown compiler:code /worker/run
 chmod 711 /worker/run
 
-exec python3 server.py
+exec python3 server.py > /log/server.log
