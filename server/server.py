@@ -133,9 +133,10 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             await server.serve_forever()
 
 
-    def get(self, data):
-        if self.request.headers.get('Sec-WebSocket-Protocol', None) != token:
+    def get(self, *args, **kwargs):
+        if self.get_argument('token') != token:
             raise tornado.web.HTTPError(403)
+        super(WebSocketHandler, self).get(*args, **kwargs)
 
 
     def open(self, data):
