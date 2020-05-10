@@ -133,13 +133,9 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             await server.serve_forever()
 
 
-    def get(self, *args, **kwargs):
+    def open(self, data):
         if self.get_argument('token') != token:
             raise tornado.web.HTTPError(403)
-        super(WebSocketHandler, self).get(*args, **kwargs)
-
-
-    def open(self, data):
         asyncio.create_task(self.listen_socket(data))
 
 
