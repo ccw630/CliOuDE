@@ -9,12 +9,14 @@ import sys
 import os
 
 from worker_gateway.server import WebSocketChannelHandler
+from heartbeat.handler import HeartbeatHandler
  
 
 class Application(tornado.web.Application):
     def __init__(self):
         handlers = [
-            (r'/run', WebSocketChannelHandler)
+            (r'/run', WebSocketChannelHandler),
+            (r'/heartbeat', HeartbeatHandler)
         ]
 
         tornado.web.Application.__init__(self, handlers)
