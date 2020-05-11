@@ -16,16 +16,15 @@ class WorkerService:
         try:
             resp = requests.post(self.backend_url, json=data,
                                  headers={"X-WORKER-SERVER-TOKEN": token,
-                                          "Content-Type": "application/json"}, timeout=5).text
+                                          "Content-Type": "application/json"}, timeout=5).status_code
         except Exception as e:
             logger.exception(e)
             raise WorkerServiceError("Heartbeat request failed")
         try:
-            r = json.loads(resp)
-            if r["error"]:
-                raise WorkerServiceError(r["data"])
+            if resp != 200:
+                raise WorkerServiceError("Heartbeat response not OK")
         except Exception as e:
-            logger.exception("Heartbeat failed, response is {}".format(resp))
+            logger.exception(f"Heartbeat failed, response is {resp}")
             raise WorkerServiceError("Invalid heartbeat response")
 
     def heartbeat(self):
