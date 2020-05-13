@@ -5,6 +5,8 @@ from tornado.ioloop import IOLoop
 
 import asyncio
 import logging
+import hashlib
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +25,7 @@ class WebSocketClient:
     def _connect(self, submission_id):
         self.ws = None
         self.submission_id = submission_id
-        ws_url = f'{self.worker_base_url}/{submission_id}?token=b82fd881d1303ba9794e19b7f4a5e2b79231d065f744e72172ad9ee792909126'
+        ws_url = f'{self.worker_base_url}/{submission_id}?token={hashlib.sha256(os.getenv('WORKER_TOKEN','').encode("utf-8")).hexdigest()}'
         logger.info('Connecting to {}'.format(ws_url))
 
         request = HTTPRequest(ws_url)

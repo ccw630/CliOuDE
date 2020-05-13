@@ -1,8 +1,17 @@
+import hashlib
+import os
 from tornado.web import RequestHandler, HTTPError
 
+from orm import Worker
 
 class HeartbeatHandler(RequestHandler):
     def post(self):
-        if self.request.headers.get('X-Worker-Server-Token', None) != 'b82fd881d1303ba9794e19b7f4a5e2b79231d065f744e72172ad9ee792909126':
+        if self.request.headers.get('X-Worker-Server-Token', None) != hashlib.sha256(os.getenv('WORKER_TOKEN','').encode("utf-8")).hexdigest():
             raise HTTPError(403)
-        print(self.request.body)
+        data = self.request.body
+        Worker.upsert_worker(hostname=data['hostname'],
+                             version=data['kernel_version'],
+                             cpu_core=data["cpu_core"],
+                             memory_usage=data["memory"],
+                             cpu_usage=data["cpu"],
+                             service_url=data["service_url"])

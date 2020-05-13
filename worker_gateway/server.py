@@ -6,6 +6,7 @@ import uuid
 
 from worker_gateway.client import WebSocketClient
 from languages import languages
+from orm import Worker
 
 
 class WebSocketChannelHandler(WebSocketHandler):
@@ -22,7 +23,7 @@ class WebSocketChannelHandler(WebSocketHandler):
 
     def open(self):
         self.submission_id = uuid.uuid1().hex
-        self.client = WebSocketClient('ws://localhost:12359', lambda: self.close(1000))
+        self.client = WebSocketClient(Worker.choose_worker().service_url, lambda: self.close(1000))
         self.client.on_open(self.submission_id, self.write_message)
         self.write_message(json.dumps({'type': 'result', 'data': {'data': {'result': -1}}}))
 
