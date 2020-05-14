@@ -25,7 +25,7 @@ class WebSocketClient:
     def _connect(self, submission_id):
         self.ws = None
         self.submission_id = submission_id
-        ws_url = f'{self.worker_base_url}/{submission_id}?token={hashlib.sha256(os.getenv('WORKER_TOKEN','').encode("utf-8")).hexdigest()}'
+        ws_url = f'{self.worker_base_url}/{submission_id}?token={hashlib.sha256(os.getenv("WORKER_TOKEN","").encode("utf-8")).hexdigest()}'
         logger.info('Connecting to {}'.format(ws_url))
 
         request = HTTPRequest(ws_url)
