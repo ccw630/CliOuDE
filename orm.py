@@ -29,10 +29,11 @@ class Worker(Base):
     @classmethod
     def choose_worker(cls):
         db.begin(subtransactions=True)
-        res = db.query(cls).filter(cls.last_heartbeat + timedelta(seconds=6) >= datetime.now()).order_by(cls.task_number).first()
-        res.task_number += 1
+        worker = db.query(cls).filter(cls.last_heartbeat + timedelta(seconds=6) >= datetime.now()).order_by(cls.task_number).first()
+        worker.task_number += 1
+        db.add(worker)
         db.commit()
-        return res
+        return worker
     
 
     @classmethod
@@ -46,4 +47,5 @@ class Worker(Base):
         worker.cpu_usage = cpu_usage
         worker.service_url = service_url
         worker.last_heartbeat = datetime.now()
+        db.add(worker)
         db.commit()
