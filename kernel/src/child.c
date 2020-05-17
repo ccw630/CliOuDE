@@ -145,7 +145,7 @@ void child_process(FILE *log_fp, struct config *_config) {
         } else {
             error_fd = get_io_fd(log_fp, _config->error_path, "w");
         }
-        if (dup2(error_fd, fileno(stdout)) == -1) {
+        if (dup2(error_fd, fileno(stderr)) == -1) {
             CHILD_ERROR_EXIT(DUP2_FAILED);
         }
     }
