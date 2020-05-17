@@ -1,4 +1,5 @@
 from tornado.websocket import WebSocketHandler
+from tornado.web import HTTPError
 
 import asyncio
 import json
