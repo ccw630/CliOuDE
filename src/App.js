@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Layout, Row, Col, Switch, Typography, Badge, Space, Select, Button } from 'antd'
-import { FileTextOutlined, CodeOutlined, CaretRightOutlined, ReloadOutlined, AlignLeftOutlined } from '@ant-design/icons'
+import { FileTextOutlined, CodeOutlined, CaretRightOutlined, CloseOutlined, ReloadOutlined, AlignLeftOutlined } from '@ant-design/icons'
+
 import Editor from './editor/editor'
 import { statusMap, statusDescMap, languageDescMap, languageModeMap, languageCodeMap } from './scripts/constants'
 import './App.css'
@@ -21,18 +22,65 @@ function App() {
   const [needInput, setNeedInput] = useState(wide)
   const [language, setLanguage] = useState(localStorage.getItem('CLIOUDE_LANG') || 'C++')
   const [code, setCode] = useState(localStorage.getItem('CLIOUDE_CODE') || languageCodeMap[language])
+  const [ws, setWs] = useState(null)
+  const [running, setRunning] = useState(false)
 
   const handleRun = (e) => {
-    const code = sourceEditor.current.getValue()
-    localStorage.setItem('CLIOUDE_CODE', code)
-    outputEditor.current && outputEditor.current.clear()
-    consoleEditor.current && consoleEditor.current.clear()
-    setExecStatus(-1)
-    // consoleEditor.current && consoleEditor.current.appendValue('output\n')
+    if (running) {
+      ws && ws.close()
+      setExecStatus(-4)
+      setRunning(false)
+    } else {
+      const code = sourceEditor.current.getValue()
+      localStorage.setItem('CLIOUDE_CODE', code)
+      outputEditor.current && outputEditor.current.clear()
+      consoleEditor.current && consoleEditor.current.clear()
+      setWs(new WebSocket('ws://localhost:80/run'))
+      setRunning(true)
+    }
+  }
+
+  useEffect(() => {
+    if(ws) {
+      ws.onmessage = msg => {
+        const data = JSON.parse(msg.data)
+        if (data.type === 'result') {
+          const result = data.data.result
+          if (result !== -1) {
+            setRunning(false)
+          }
+          if (result === -3 || result === 5) {
+            writeOutput(data.data.err)
+          }
+          setExecStatus(data.data.result)
+        } else if (data.type === 'output') {
+          writeOutput(data.data)
+        }
+      }
+      ws.onopen = () => {
+        ws.send(JSON.stringify({
+          type: 'code',
+          data: {
+            src: sourceEditor.current.getValue(),
+            language
+          }
+        }))
+        inputEditor.current && sendInput(inputEditor.current.getValue())
+      }
+    }
+  })
+
+  const writeOutput = (output) => {
+    outputEditor.current && outputEditor.current.appendValue(output)
+    consoleEditor.current && consoleEditor.current.appendValue(output)
   }
 
   const sendInput = (input) => {
-    console.log(input)
+    if (input && !input.endsWith('\n')) input += '\n'
+    ws.send(JSON.stringify({
+      type: 'input',
+      data: input
+    }))
   }
 
   return (
@@ -59,8 +107,8 @@ function App() {
             >
               {Object.keys(languageDescMap).map(k => <Option value={k}>{languageDescMap[k]}</Option>)}
             </Select>
-            <Button type="primary" icon={<CaretRightOutlined />} onClick={handleRun}>
-              {wide && "运行(Alt + R)"}
+            <Button type="primary" icon={running ? <CloseOutlined /> : <CaretRightOutlined />} onClick={handleRun} danger={running}>
+              {wide && (running ? "停止" : "运行")}
             </Button>
           </Space>
         </div>
@@ -70,8 +118,6 @@ function App() {
           <Editor
             language={languageModeMap[language]}
             code={code}
-            handleRun={handleRun}
-            isSourceEditor={true}
             ref={sourceEditor}
           />
         </div>
@@ -113,8 +159,7 @@ function App() {
               <div id="inputEditor">
                 <Editor
                   language="plaintext"
-                  handleRun={handleRun}
-                  sendInput={sendInput}
+                  sendInput={()=>{}}
                   ref={inputEditor}
                 />
               </div>
@@ -123,8 +168,7 @@ function App() {
               <div id="outputEditor">
                 <Editor
                   language="plaintext"
-                  readOnly={true}
-                  handleRun={handleRun}
+                  consoleMode={true}
                   ref={outputEditor}
                 />
               </div>
@@ -135,7 +179,7 @@ function App() {
               <Editor
                 ref={consoleEditor}
                 language="plaintext"
-                handleRun={handleRun}
+                consoleMode={true}
                 sendInput={sendInput}
               />
             </div>
