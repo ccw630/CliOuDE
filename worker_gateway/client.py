@@ -17,7 +17,7 @@ class WebSocketClient:
         self.ws = None
         self.ws_future = Future()
         self.disconnected = False
-        self.establish_attempts = 10
+        self.establish_attempts = 86400
         self.worker_base_url = worker_base
         self.close_callback = close_callback
 
