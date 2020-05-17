@@ -61,6 +61,10 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         super(WebSocketHandler, self).__init__(*args, **kwargs)
         self.connected = False
         self.started = False
+        self.reader = None
+        self.writer = None
+        self.scanner = None
+        self.unix_server = None
 
 
     async def _compile(self, submission_dir, compile_config, run_config, src):
@@ -175,7 +179,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         if self.scanner:
             self.scanner.cancel()
         if self.server:
-            self.server.cancel()
+            self.unix_server.cancel()
 
 
 class Application(tornado.web.Application):
