@@ -61,9 +61,6 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         super(WebSocketHandler, self).__init__(*args, **kwargs)
         self.connected = False
         self.started = False
-        self.reader = None
-        self.writer = None
-        self.scanner = None
 
 
     async def _compile(self, submission_dir, compile_config, run_config, src):
@@ -136,7 +133,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
     def open(self, data):
         if self.get_argument('token') != token:
             raise tornado.web.HTTPError(403)
-        asyncio.create_task(self.listen_socket(data))
+        self.unix_server = asyncio.create_task(self.listen_socket(data))
 
 
     def _run_callback(self, future):
@@ -145,6 +142,8 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         except CompileError as e:
             logger.exception(e)
             self.write_message(json.dumps({'type': 'result', 'data': {'result': -3, 'err': e.message}}))
+        except tornado.websocket.WebSocketClosedError as e:
+            logger.warn('Websocket already closed, ignore..')
         except Exception as e:
             logger.exception(e)
             self.write_message(json.dumps({'type': 'result', 'data': {'result': 5, 'err': e.__class__.__name__ + ": " + str(e)}}))
@@ -175,6 +174,8 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             self.writer.close()
         if self.scanner:
             self.scanner.cancel()
+        if self.server:
+            self.server.cancel()
 
 
 class Application(tornado.web.Application):
