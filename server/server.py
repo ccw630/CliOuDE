@@ -144,10 +144,10 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             self.write_message(json.dumps({'type': 'result', 'data': future.result()}))
         except CompileError as e:
             logger.exception(e)
-            self.write_message(json.dumps({'type': 'result', 'data': {'data': {'result': -3}, 'err': e.message}}))
+            self.write_message(json.dumps({'type': 'result', 'data': {'result': -3, 'err': e.message}}))
         except Exception as e:
             logger.exception(e)
-            self.write_message(json.dumps({'type': 'result', 'data': {'data': {'result': 5}, 'err': e.__class__.__name__ + ": " + str(e)}}))
+            self.write_message(json.dumps({'type': 'result', 'data': {'result': 5, 'err': e.__class__.__name__ + ": " + str(e)}}))
         async def delay_close():
             await asyncio.sleep(2)
             self.close(1000)
