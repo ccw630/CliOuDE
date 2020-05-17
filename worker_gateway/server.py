@@ -28,7 +28,7 @@ class WebSocketChannelHandler(WebSocketHandler):
             raise HTTPError(404)
         self.client = WebSocketClient(worker.service_url, lambda: self.close(1000))
         self.client.on_open(self.submission_id, self.write_message)
-        self.write_message(json.dumps({'type': 'result', 'data': {'data': {'result': -1}}}))
+        self.write_message(json.dumps({'type': 'result', 'data': {'result': -1}}))
 
  
     def on_message(self, message):
