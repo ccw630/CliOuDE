@@ -31,6 +31,9 @@ class Worker(Base):
         try:
             db.begin(subtransactions=True)
             worker = db.query(cls).filter(cls.last_heartbeat + timedelta(seconds=6) >= datetime.now()).order_by(cls.task_number).first()
+            if not worker:
+                db.commit()
+                return None
             worker.task_number += 1
             db.add(worker)
             db.commit()

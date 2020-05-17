@@ -23,7 +23,10 @@ class WebSocketChannelHandler(WebSocketHandler):
 
     def open(self):
         self.submission_id = uuid.uuid1().hex
-        self.client = WebSocketClient(Worker.choose_worker().service_url, lambda: self.close(1000))
+        worker = Worker.choose_worker()
+        if not worker:
+            raise HTTPError(404)
+        self.client = WebSocketClient(worker.service_url, lambda: self.close(1000))
         self.client.on_open(self.submission_id, self.write_message)
         self.write_message(json.dumps({'type': 'result', 'data': {'data': {'result': -1}}}))
 
