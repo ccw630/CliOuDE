@@ -28,24 +28,32 @@ class Worker(Base):
 
     @classmethod
     def choose_worker(cls):
-        db.begin(subtransactions=True)
-        worker = db.query(cls).filter(cls.last_heartbeat + timedelta(seconds=6) >= datetime.now()).order_by(cls.task_number).first()
-        worker.task_number += 1
-        db.add(worker)
-        db.commit()
+        try:
+            db.begin(subtransactions=True)
+            worker = db.query(cls).filter(cls.last_heartbeat + timedelta(seconds=6) >= datetime.now()).order_by(cls.task_number).first()
+            worker.task_number += 1
+            db.add(worker)
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            raise e
         return worker
     
 
     @classmethod
     def upsert_worker(cls, hostname, version, cpu_core, memory_usage, cpu_usage, service_url):
-        worker = db.query(cls).filter(cls.hostname == hostname).first()
-        if not worker:
-            worker = cls(hostname=hostname)
-        worker.version = version
-        worker.cpu_core = cpu_core
-        worker.memory_usage = memory_usage
-        worker.cpu_usage = cpu_usage
-        worker.service_url = service_url
-        worker.last_heartbeat = datetime.now()
-        db.add(worker)
-        db.commit()
+        try:
+            worker = db.query(cls).filter(cls.hostname == hostname).first()
+            if not worker:
+                worker = cls(hostname=hostname)
+            worker.version = version
+            worker.cpu_core = cpu_core
+            worker.memory_usage = memory_usage
+            worker.cpu_usage = cpu_usage
+            worker.service_url = service_url
+            worker.last_heartbeat = datetime.now()
+            db.add(worker)
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            raise e
