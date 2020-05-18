@@ -25,25 +25,31 @@ export const statusDescMap = {
 }
 
 export const languageDescMap = {
-  'C': 'C (gcc 5.4.0)',
-  'C++': 'C++ (g++ 5.4.0)',
-  'Java': 'Java (OpenJDK 1.8)',
-  'Python3': 'Python (3.5.3)',
-  'JavaScript': 'JavaScript (Node 8.16.1)'
+  'Bash': 'Bash (GNU bash 5.0.16)',
+  'C': 'C (gcc 9.3.0)',
+  'C++': 'C++ (g++ 9.3.0)',
+  'Java': 'Java (OpenJDK 11.0.7)',
+  'Python3': 'Python (Python 3.8.2)',
+  'JavaScript': 'JavaScript (Node.js v12.16.3)',
+  'Scala': 'Scala (Scala 2.13.0)'
 }
 
 export const languageModeMap = {
+  'Bash': 'shell',
   'C': 'c',
   'C++': 'cpp',
   'Java': 'java',
   'Python3': 'python',
-  'JavaScript': 'javascript'
+  'JavaScript': 'javascript',
+  'Scala': 'scala'
 }
 
 export const languageCodeMap = {
+  'Bash': 'echo "hello, world"\n',
   'C': '#include <stdio.h>\n\nint main() {\n\tprintf("hello, world\\n");\n\treturn 0;\n}\n',
   'C++': '#include <iostream>\nusing namespace std;\nint main() {\n\tcout << "hello, world" << endl;\n\treturn 0;\n}\n',
   'Java': 'public class Main {\n\tpublic static void main(String[] args) {\n\t\tSystem.out.println("hello, world");\n\t}\n}\n',
   'Python3': 'print("hello, world")\n',
-  'JavaScript': 'console.log("hello, world")\n'
+  'JavaScript': 'console.log("hello, world")\n',
+  'Scala': 'object Main extends App {\n\tprintln("hello, world")\n}\n'
 }

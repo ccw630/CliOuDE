@@ -24,6 +24,7 @@ function App() {
   const [code, setCode] = useState(localStorage.getItem('CLIOUDE_CODE') || languageCodeMap[language])
   const [ws, setWs] = useState(null)
   const [running, setRunning] = useState(false)
+  const [extraInfo, setExtraInfo] = useState('')
 
   const handleRun = (e) => {
     if (running) {
@@ -38,6 +39,7 @@ function App() {
       setWs(new WebSocket('ws://localhost:80/run'))
       setRunning(true)
     }
+    setExtraInfo('')
   }
 
   useEffect(() => {
@@ -48,9 +50,21 @@ function App() {
           const result = data.data.result
           if (result !== -1) {
             setRunning(false)
-          }
-          if (result === -3 || result === 5) {
-            writeOutput(data.data.err)
+            if (result === -3 || result === 5) {
+              writeOutput(data.data.err.replace(/\/worker\/run\/\S+\//g, ''))
+            } else {
+              const time = (data.data.cpu_time === null ? "-" : data.data.cpu_time + "ms")
+              const memory = (data.data.memory === null ? "-" : Math.floor(data.data.memory / 1024 / 1024) + "MB")
+              setExtraInfo(`, ${time}, ${memory}`)
+            }
+            let extra = ''
+            if (data.data.exit_code !== 0) {
+              extra += `\n[WARN] Exited with code ${data.data.exit_code}.`
+            }
+            if (data.data.signal !== 0) {
+              extra += `\n[WARN] Killed by signal ${data.data.signal}.`
+            }
+            setTimeout(() => writeOutput(extra), 200)
           }
           setExecStatus(data.data.result)
         } else if (data.type === 'output') {
@@ -97,6 +111,14 @@ function App() {
         </Space>
         <div className="right">
           <Space>
+            {wide && <Switch
+              checkedChildren="输入: 开"
+              unCheckedChildren="输入: 关"
+              checked={needInput}
+              disabled={execStatus === -1}
+              size="big"
+              onChange={(checked, e) => setNeedInput(checked)}
+            />}
             <Select
               value={language}
               style={{ width: wide ? 330 : 120 }}
@@ -136,18 +158,13 @@ function App() {
                 <Space>
                   <CodeOutlined />
                   <Text>{needInput ? "输出 Output" : "控制台 Console"}</Text>
+                  
                 </Space>
               </Col>
               <Col span={12} style={{"textAlign": "right"}}>
                 <Space>
-                  {wide && <Switch
-                    checkedChildren="输入: 开"
-                    unCheckedChildren="输入: 关"
-                    checked={needInput}
-                    disabled={execStatus === -1}
-                    onChange={(checked, e) => setNeedInput(checked)}
-                  />}
-                  <Badge status={statusMap[execStatus]} text={statusDescMap[execStatus]} />
+                  
+                  <Badge status={statusMap[execStatus]} text={statusDescMap[execStatus] + extraInfo} />
                 </Space>
               </Col>
             </Row>
