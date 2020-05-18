@@ -1,5 +1,21 @@
 default_env = ["LANG=en_US.UTF-8", "LANGUAGE=en_US:en", "LC_ALL=en_US.UTF-8"]
 
+_bash_lang_config = {
+    "compile": {
+        "src_name": "solution.sh",
+        "exe_name": "solution_e.sh",
+        "max_cpu_time": 5000,
+        "max_real_time": 10000,
+        "max_memory": -1,
+        "compile_command": "/bin/cp {src_path} {exe_path}",
+    },
+    "run": {
+        "command": "/usr/bin/bash {exe_path}",
+        "seccomp_rule": "general",
+        "env": default_env
+    }
+}
+
 _c_lang_config = {
     "compile": {
         "src_name": "main.c",
@@ -54,11 +70,11 @@ _java_lang_config = {
 _py3_lang_config = {
     "compile": {
         "src_name": "solution.py",
-        "exe_name": "__pycache__/solution.cpython-38.pyc",
+        "exe_name": "solution_e.py",
         "max_cpu_time": 5000,
         "max_real_time": 10000,
         "max_memory": 256 * 1024 * 1024,
-        "compile_command": "/usr/bin/python3 -m py_compile {src_path}",
+        "compile_command": "/bin/cp {src_path} {exe_path}",
     },
     "run": {
         "command": "/usr/bin/python3 {exe_path}",
@@ -137,6 +153,7 @@ _scala_lang_config = {
 }
 
 languages = {
+    "Bash": _bash_lang_config,
     "C": _c_lang_config,
     "C++": _cpp_lang_config,
     "Java": _java_lang_config,
