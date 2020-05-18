@@ -178,7 +178,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             self.writer.close()
         if self.scanner:
             self.scanner.cancel()
-        if self.server:
+        if self.unix_server:
             self.unix_server.cancel()
 
 
