@@ -7,7 +7,7 @@ from tornado.web import RequestHandler, HTTPError
 from orm import Worker
 
 class HeartbeatHandler(RequestHandler):
-    def post(self):
+    async def post(self):
         if self.request.headers.get('X-Worker-Server-Token', None) != hashlib.sha256(os.getenv('WORKER_TOKEN','').encode("utf-8")).hexdigest():
             raise HTTPError(403)
         data = json.loads(self.request.body.decode())

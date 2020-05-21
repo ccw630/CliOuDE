@@ -22,7 +22,7 @@ class WebSocketChannelHandler(WebSocketHandler):
         return True
  
 
-    def open(self):
+    async def open(self):
         self.submission_id = uuid.uuid1().hex
         loop = asyncio.get_event_loop()
         worker = await loop.run_in_executor(None, Worker.choose_worker)
