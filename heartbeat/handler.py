@@ -13,9 +13,9 @@ class HeartbeatHandler(RequestHandler):
             raise HTTPError(403)
         data = json.loads(self.request.body.decode())
         loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, Worker.upsert_worker, hostname=data['hostname'],
-                                                               version=data['kernel_version'],
-                                                               cpu_core=data["cpu_core"],
-                                                               memory_usage=data["memory"],
-                                                               cpu_usage=data["cpu"],
-                                                               service_url=data["service_url"])
+        await loop.run_in_executor(None, lambda: Worker.upsert_worker(hostname=data['hostname'],
+                                                                      version=data['kernel_version'],
+                                                                      cpu_core=data["cpu_core"],
+                                                                      memory_usage=data["memory"],
+                                                                      cpu_usage=data["cpu"],
+                                                                      service_url=data["service_url"]))
