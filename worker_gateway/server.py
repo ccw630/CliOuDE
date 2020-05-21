@@ -24,7 +24,8 @@ class WebSocketChannelHandler(WebSocketHandler):
 
     def open(self):
         self.submission_id = uuid.uuid1().hex
-        worker = Worker.choose_worker()
+        loop = asyncio.get_event_loop()
+        worker = await loop.run_in_executor(None, Worker.choose_worker)
         if not worker:
             raise HTTPError(404)
         self.client = WebSocketClient(worker.service_url, lambda: self.close(1000))

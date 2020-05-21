@@ -15,8 +15,8 @@ from heartbeat.handler import HeartbeatHandler
 class Application(tornado.web.Application):
     def __init__(self):
         handlers = [
-            (r'/run', WebSocketChannelHandler),
-            (r'/heartbeat', HeartbeatHandler)
+            (r'/api/run', WebSocketChannelHandler),
+            (r'/api/heartbeat', HeartbeatHandler)
         ]
 
         tornado.web.Application.__init__(self, handlers)
