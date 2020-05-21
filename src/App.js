@@ -36,7 +36,7 @@ function App() {
       localStorage.setItem('CLIOUDE_CODE', code)
       outputEditor.current && outputEditor.current.clear()
       consoleEditor.current && consoleEditor.current.clear()
-      setWs(new WebSocket(`ws://${process.env.NODE_ENV === 'development' ? 'localhost:80' : window.location.host}/api/run`))
+      setWs(new WebSocket(`ws://${process.env.NODE_ENV === 'development' ? 'localhost:8081' : window.location.host}/api/run`))
       setRunning(true)
     }
     setExtraInfo('')
