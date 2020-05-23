@@ -2,8 +2,8 @@ default_env = ["LANG=en_US.UTF-8", "LANGUAGE=en_US:en", "LC_ALL=en_US.UTF-8"]
 
 _bash_lang_config = {
     "compile": {
-        "src_name": "solution.sh",
-        "exe_name": "solution_e.sh",
+        "src_name": "main.sh",
+        "exe_name": "main_e.sh",
         "max_cpu_time": 5000,
         "max_real_time": 10000,
         "max_memory": -1,
@@ -11,7 +11,7 @@ _bash_lang_config = {
     },
     "run": {
         "command": "/usr/bin/bash {exe_path}",
-        "seccomp_rule": "general",
+        "seccomp_rule": None,
         "env": default_env
     }
 }
@@ -39,7 +39,7 @@ _cpp_lang_config = {
         "max_cpu_time": 10000,
         "max_real_time": 20000,
         "max_memory": 1024 * 1024 * 1024,
-        "compile_command": "/usr/bin/g++ -DONLINE_JUDGE -O2 -w -fmax-errors=3 -std=c++14 {src_path} -lm -o {exe_path}",
+        "compile_command": "/usr/bin/g++ -DONLINE_JUDGE -O2 -w -fmax-errors=3 -std=c++17 {src_path} -lm -o {exe_path}",
     },
     "run": {
         "command": "{exe_path}",
@@ -69,8 +69,8 @@ _java_lang_config = {
 
 _py3_lang_config = {
     "compile": {
-        "src_name": "solution.py",
-        "exe_name": "solution_e.py",
+        "src_name": "main.py",
+        "exe_name": "main_e.py",
         "max_cpu_time": 5000,
         "max_real_time": 10000,
         "max_memory": 256 * 1024 * 1024,
@@ -85,8 +85,8 @@ _py3_lang_config = {
 
 _js_lang_config = {
     "compile": {
-        "src_name": "solution.js",
-        "exe_name": "solution_e.js",
+        "src_name": "main.js",
+        "exe_name": "main_e.js",
         "max_cpu_time": 5000,
         "max_real_time": 10000,
         "max_memory": -1,
@@ -102,8 +102,8 @@ _js_lang_config = {
 
 _bf_lang_config = {
     "compile": {
-        "src_name": "solution.bf",
-        "exe_name": "solution_e.bf",
+        "src_name": "main.bf",
+        "exe_name": "main_e.bf",
         "max_cpu_time": 5000,
         "max_real_time": 10000,
         "max_memory": 128 * 1024 * 1024,
