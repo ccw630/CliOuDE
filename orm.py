@@ -60,3 +60,12 @@ class Worker(Base):
         except Exception as e:
             db.rollback()
             raise e
+
+    @classmethod
+    def cull_worker(cls):
+        try:
+            db.query(cls).filter(cls.last_heartbeat + timedelta(seconds=600) < datetime.now()).delete()
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            raise e

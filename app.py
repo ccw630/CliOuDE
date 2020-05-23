@@ -4,12 +4,10 @@ import tornado.httpserver
 import tornado.ioloop
 
 import asyncio
-import socket
-import sys
-import os
 
 from worker_gateway.server import WebSocketChannelHandler
 from heartbeat.handler import HeartbeatHandler
+from orm import Worker
  
 
 class Application(tornado.web.Application):
@@ -23,6 +21,7 @@ class Application(tornado.web.Application):
 
 
 if __name__ == '__main__':
+    Worker.cull_worker()
     app = Application()
     server = tornado.httpserver.HTTPServer(app)
     server.listen(8080)
