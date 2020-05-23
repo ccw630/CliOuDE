@@ -51,7 +51,7 @@ function App() {
           if (result !== -1) {
             setRunning(false)
             if (result === -3 || result === 5) {
-              writeOutput(data.data.err.replace(/\/worker\/run\/\S+\//g, ''))
+              data.data.err && writeOutput(data.data.err.replace(/\/worker\/run\/\S+\//g, ''))
             } else {
               const time = (data.data.cpu_time === null ? "-" : data.data.cpu_time + "ms")
               const memory = (data.data.memory === null ? "-" : Math.floor(data.data.memory / 1024 / 1024) + "MB")
