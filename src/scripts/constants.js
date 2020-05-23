@@ -31,7 +31,7 @@ export const languageDescMap = {
   'Java': 'Java (OpenJDK 11.0.7)',
   'Python3': 'Python (Python 3.8.2)',
   'JavaScript': 'JavaScript (Node.js v12.16.3)',
-  'Scala': 'Scala (Scala 2.13.0)'
+  // 'Scala': 'Scala (Scala 2.13.0)'
 }
 
 export const languageModeMap = {
