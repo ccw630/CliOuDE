@@ -39,3 +39,4 @@ spec:
   selector:
     app: editor
   type: LoadBalancer
+  externalTrafficPolicy: Local

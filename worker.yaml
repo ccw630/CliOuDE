@@ -36,6 +36,12 @@ spec:
         volumeMounts:
         - mountPath: /tmp
           name: worker-tmpfs0
+        livenessProbe:
+          exec:
+            command:
+            - python3
+            - /code/service.py
+          periodSeconds: 5
       volumes:
       - emptyDir:
           medium: Memory
