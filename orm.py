@@ -41,7 +41,23 @@ class Worker(Base):
             db.rollback()
             raise e
         return worker
-    
+
+
+    @classmethod
+    def return_worker_quota(cls, hostname):
+        try:
+            db.begin(subtransactions=True)
+            worker = db.query(cls).filter(cls.hostname == hostname).first()
+            if not worker:
+                db.commit()
+                return
+            worker.task_number -= 1
+            db.add(worker)
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            raise e
+
 
     @classmethod
     def upsert_worker(cls, hostname, version, cpu_core, memory_usage, cpu_usage, service_url):

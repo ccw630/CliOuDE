@@ -3,8 +3,6 @@ import tornado.websocket
 import tornado.httpserver
 import tornado.ioloop
 
-import asyncio
-
 from worker_gateway.server import WebSocketChannelHandler
 from heartbeat.handler import HeartbeatHandler
 from orm import Worker

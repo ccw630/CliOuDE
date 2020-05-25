@@ -1,7 +1,6 @@
 from tornado.websocket import WebSocketHandler
 from tornado.web import HTTPError
 
-import asyncio
 import json
 import uuid
 
@@ -22,13 +21,12 @@ class WebSocketChannelHandler(WebSocketHandler):
         return True
  
 
-    async def open(self):
+    def open(self):
         self.submission_id = uuid.uuid1().hex
-        loop = asyncio.get_event_loop()
-        worker = await loop.run_in_executor(None, Worker.choose_worker)
+        worker = Worker.choose_worker()
         if not worker:
             raise HTTPError(404)
-        self.client = WebSocketClient(worker.service_url, lambda: self.close(1000))
+        self.client = WebSocketClient(worker, lambda: self.close(1000))
         self.client.on_open(self.submission_id, self.write_message)
         self.write_message(json.dumps({'type': 'result', 'data': {'result': -1}}))
 

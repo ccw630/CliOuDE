@@ -8,17 +8,20 @@ import logging
 import hashlib
 import os
 
+from orm import Worker
+
 logger = logging.getLogger(__name__)
 
 class WebSocketClient:
 
-    def __init__(self, worker_base, close_callback):
+    def __init__(self, worker, close_callback):
         self.submission_id = None
         self.ws = None
         self.ws_future = Future()
         self.disconnected = False
         self.establish_attempts = 86400
-        self.worker_base_url = worker_base
+        self.worker_base_url = worker.service_url
+        self.worker_hostname = worker.hostname
         self.close_callback = close_callback
 
 
@@ -105,3 +108,4 @@ class WebSocketClient:
 
     def on_close(self):
         self._disconnect()
+        Worker.return_worker_quota(self.worker_hostname)
