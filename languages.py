@@ -12,7 +12,7 @@ _bash_lang_config = {
     "run": {
         "command": "/usr/bin/bash {exe_path}",
         "seccomp_rule": None,
-        "env": default_env
+        "env": []
     }
 }
 
