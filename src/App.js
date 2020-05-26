@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Layout, Row, Col, Switch, Typography, Badge, Space, Select, Button } from 'antd'
-import { FileTextOutlined, CodeOutlined, CaretRightOutlined, CloseOutlined, ReloadOutlined, AlignLeftOutlined } from '@ant-design/icons'
+import { CloudServerOutlined, FileTextOutlined, CodeOutlined, CaretRightOutlined, CloseOutlined, ReloadOutlined, AlignLeftOutlined } from '@ant-design/icons'
 
 import Editor from './editor/editor'
 import { statusMap, statusDescMap, languageDescMap, languageModeMap, languageCodeMap } from './scripts/constants'
@@ -42,6 +42,14 @@ function App() {
     setExtraInfo('')
   }
 
+  document.onkeydown = (e) => {
+    var keyCode = e.keyCode || e.which;
+    if (e.altKey && keyCode === (running ? 84 : 82)) { // F9
+      e.preventDefault();
+      handleRun();
+    }
+  }
+
   useEffect(() => {
     if(ws) {
       ws.onmessage = msg => {
@@ -54,8 +62,9 @@ function App() {
               data.data.err && writeOutput(data.data.err.replace(/\/worker\/run\/\S+\//g, ''))
             } else {
               const time = (data.data.cpu_time === null ? "-" : data.data.cpu_time + "ms")
+              const rtime = (data.data.real_time === null ? "-" : Math.floor(data.data.real_time / 1000) + "s")
               const memory = (data.data.memory === null ? "-" : Math.floor(data.data.memory / 1024 / 1024) + "MB")
-              setExtraInfo(`, ${time}, ${memory}`)
+              setExtraInfo(`, ${rtime} (CPU ${time}), ${memory}`)
             }
             let extra = ''
             if (data.data.exit_code !== 0) {
@@ -101,7 +110,8 @@ function App() {
     <Layout>
       <Header style={{ height: 48 }}>
         <Space className="logo">
-          Clioude
+          {wide && <CloudServerOutlined />}
+          CliOuDE
           {wide && <Button type="link" ghost onClick={() => sourceEditor.current.setValue(languageCodeMap[language])}>
             <ReloadOutlined />
           </Button>}
@@ -130,7 +140,7 @@ function App() {
               {Object.keys(languageDescMap).map(k => <Option value={k}>{languageDescMap[k]}</Option>)}
             </Select>
             <Button type="primary" icon={running ? <CloseOutlined /> : <CaretRightOutlined />} onClick={handleRun} danger={running}>
-              {wide && (running ? "停止" : "运行")}
+              {wide && (running ? "停止(⌥ + T)" : "运行(⌥ + R)")}
             </Button>
           </Space>
         </div>
@@ -158,12 +168,10 @@ function App() {
                 <Space>
                   <CodeOutlined />
                   <Text>{needInput ? "输出 Output" : "控制台 Console"}</Text>
-                  
                 </Space>
               </Col>
               <Col span={12} style={{"textAlign": "right"}}>
                 <Space>
-                  
                   <Badge status={statusMap[execStatus]} text={statusDescMap[execStatus] + extraInfo} />
                 </Space>
               </Col>

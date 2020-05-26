@@ -49,4 +49,6 @@ html, body, #root, .ant-layout, .ant-layout-content {
   color: aliceblue !important;
   text-align: center;
   font-size: 21px;
+  font-family: "Lucida Console", Courier, monospace;
+  color:#1890ff
 }
