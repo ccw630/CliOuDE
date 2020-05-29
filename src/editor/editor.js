@@ -1,6 +1,12 @@
 import React from 'react'
 import MonacoEditor from 'react-monaco-editor'
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api'
+import { listen } from 'vscode-ws-jsonrpc';
+import {
+    MonacoLanguageClient, CloseAction, ErrorAction,
+    MonacoServices, createConnection
+} from 'monaco-languageclient';
+import ReconnectingWebSocket from 'reconnecting-websocket';
 
 class Editor extends React.Component {
 
@@ -8,18 +14,75 @@ class Editor extends React.Component {
     super(props);
     this.state = {
       value: props.code || '',
-      lastPos : { line: 1, column: 1 },
+      lastPos: { line: 1, column: 1 },
       undo: false,
       input: '',
-      readOnly: props.readOnly || false,
       appending: false,
-      consoleMode: props.consoleMode || false
     }
+    this.languageSocket = null
+    this.languageSocketListened = false
   }
 
   invalidPosition = (line, column) => (line === this.state.lastPos.line && column < this.state.lastPos.column) || line < this.state.lastPos.line
 
+  createLanguageClient = () => {
+    if (this.languageSocketListened) this.languageSocket.close()
+    const _language = this.props.language
+    if (!['python', 'javascript'].includes(_language)) {
+      return
+    }
+
+    const url = `ws://localhost:8999/${_language}`
+    this.languageSocket = createWebSocket(url)
+   
+    // listen when the web socket is opened
+    listen({
+      webSocket: this.languageSocket,
+      onConnection: connection => {
+          // create and start the language client
+          const languageClient = createLanguageClient(connection)
+          const disposable = languageClient.start()
+          connection.onClose(() => disposable.dispose())
+          this.languageSocketListened = true
+      }
+    })
+
+    function createLanguageClient(connection) {
+      return new MonacoLanguageClient({
+        name: "A Language Client",
+        clientOptions: {
+          // use a language id as a document selector
+          documentSelector: [_language],
+          // disable the default error handler
+          errorHandler: {
+            error: () => ErrorAction.Continue,
+            closed: () => CloseAction.DoNotRestart
+          }
+        },
+        // create a language client connection from the JSON RPC connection on demand
+        connectionProvider: {
+          get: (errorHandler, closeHandler) => {
+              return Promise.resolve(createConnection(connection, errorHandler, closeHandler))
+          }
+        }
+      })
+    }
+
+    function createWebSocket(url) {
+      const socketOptions = {
+          maxReconnectionDelay: 10000,
+          minReconnectionDelay: 1000,
+          reconnectionDelayGrowFactor: 1.3,
+          connectionTimeout: 10000,
+          maxRetries: Infinity,
+          debug: false
+      }
+      return new ReconnectingWebSocket(url, [], socketOptions)
+    }
+  }
+
   editorDidMount = (editor, monaco) => {
+    console.log('editorDidMount')
     this.editor = editor
     editor.onDidChangeCursorPosition(e => {
       if (this.invalidPosition(e.position.lineNumber, e.position.column)) {
@@ -28,6 +91,11 @@ class Editor extends React.Component {
     })
     editor.setValue(this.state.value)
     editor.focus()
+
+    if (this.props.language !== 'plaintext') {
+      MonacoServices.install(editor)
+      this.createLanguageClient()
+    }
   }
 
   reformat = () => this.editor.trigger('', 'editor.action.formatDocument')
@@ -54,8 +122,8 @@ class Editor extends React.Component {
   }
   
   onChange = (newValue, e) => {
-    if (!this.state.consoleMode) return
-    const invalid = e.changes.some(x => !this.state.appending && x.range && (this.invalidPosition(x.range.startLineNumber, x.range.startColumn) || this.state.readOnly))
+    if (!this.props.consoleMode) return
+    const invalid = e.changes.some(x => !this.state.appending && x.range && (this.invalidPosition(x.range.startLineNumber, x.range.startColumn) || this.props.readOnly))
     if (e.isUndoing && !this.state.appending && invalid) {
       this.setState({ appending: true }, () => this.editor.trigger('', 'redo'))
     } else if (invalid) {
@@ -71,6 +139,12 @@ class Editor extends React.Component {
     }
   }
 
+  componentDidUpdate(prevProps) {
+    if (this.props.language !== prevProps.language) {
+      this.createLanguageClient()
+    }
+  }
+
   render() {
     const { language, readOnly } = this.props
     const options = {
@@ -78,9 +152,9 @@ class Editor extends React.Component {
       minimap: { enabled: false },
       automaticLayout: true,
       fontSize: "14px",
-      wordBasedSuggestions: language !== "plaintext",
+      // wordBasedSuggestions: language !== "plaintext",
       contextmenu: false,
-      readOnly: readOnly || false,
+      readOnly: readOnly || false
     }
     return (
       <MonacoEditor

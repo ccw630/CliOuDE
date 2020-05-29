@@ -34,7 +34,7 @@ html, body, #root, .ant-layout, .ant-layout-content {
   padding-left: 0px;
 }
 
-.right {
+.rightHeader {
   float: right;
   vertical-align: middle;
   color: #777;

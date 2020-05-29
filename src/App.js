@@ -119,7 +119,7 @@ function App() {
             <AlignLeftOutlined />
           </Button>}
         </Space>
-        <div className="right">
+        <div className="rightHeader">
           <Space>
             {wide && <Switch
               checkedChildren="输入: 开"
