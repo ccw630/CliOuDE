@@ -22,7 +22,7 @@ class WebSocketChannelHandler(WebSocketHandler):
  
 
     def open(self):
-        self.submission_id = uuid.uuid1().hex
+        self.submission_id = uuid.uuid4().hex
         worker = Worker.choose_worker()
         if not worker:
             raise HTTPError(404)
