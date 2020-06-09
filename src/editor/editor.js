@@ -28,8 +28,12 @@ class Editor extends React.Component {
   createLanguageClient = () => {
     if (this.languageSocketListened) this.languageSocket.close()
     const _language = this.props.language
-    if (!['python', 'javascript'].includes(_language)) {
+    if (!['python', 'javascript','c','cpp','shell', 'java'].includes(_language)) {
       return
+    }
+    if (!['pytho'].includes(_language)) {
+      const uri = monaco.Uri.parse(`/tmp/ls/Main.${_language}`)
+      this.editor.setModel(monaco.editor.getModel(uri) || monaco.editor.createModel(this.state.value, _language, uri))
     }
 
     const url = `ws://localhost:8999/${_language}`
@@ -81,9 +85,10 @@ class Editor extends React.Component {
     }
   }
 
-  editorDidMount = (editor, monaco) => {
+  editorDidMount = (editor) => {
     console.log('editorDidMount')
     this.editor = editor
+    
     editor.onDidChangeCursorPosition(e => {
       if (this.invalidPosition(e.position.lineNumber, e.position.column)) {
         this.editor.setPosition({ lineNumber: this.state.lastPos.line, column: this.state.lastPos.column })
@@ -93,7 +98,7 @@ class Editor extends React.Component {
     editor.focus()
 
     if (this.props.language !== 'plaintext') {
-      MonacoServices.install(editor)
+      MonacoServices.install(editor, {rootUri: '/tmp/ls/'})
       this.createLanguageClient()
     }
   }
@@ -154,7 +159,7 @@ class Editor extends React.Component {
       fontSize: "14px",
       // wordBasedSuggestions: language !== "plaintext",
       contextmenu: false,
-      readOnly: readOnly || false
+      readOnly: readOnly || false,
     }
     return (
       <MonacoEditor

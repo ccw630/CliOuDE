@@ -67,13 +67,13 @@ function App() {
               setExtraInfo(`, ${rtime} (CPU ${time}), ${memory}`)
             }
             let extra = ''
-            if (data.data.exit_code !== 0) {
+            if (data.data.exit_code) {
               extra += `\n[WARN] Exited with code ${data.data.exit_code}.`
             }
-            if (data.data.signal !== 0) {
+            if (data.data.signal) {
               extra += `\n[WARN] Killed by signal ${data.data.signal}.`
             }
-            setTimeout(() => writeOutput(extra), 200)
+            if (extra) setTimeout(() => writeOutput(extra), 200)
           }
           setExecStatus(data.data.result)
         } else if (data.type === 'output') {
@@ -133,6 +133,7 @@ function App() {
               value={language}
               style={{ width: wide ? 330 : 120 }}
               onChange={value => {
+                localStorage.setItem('CLIOUDE_CODE', sourceEditor.current.getValue())
                 setLanguage(value)
                 localStorage.setItem('CLIOUDE_LANG', value)
               }}
