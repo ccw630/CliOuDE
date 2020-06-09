@@ -31,9 +31,12 @@ class Editor extends React.Component {
     if (!['python', 'javascript','c','cpp','shell', 'java'].includes(_language)) {
       return
     }
-    if (!['pytho'].includes(_language)) {
+    if (!['python', 'shell', 'javascript'].includes(_language)) {
+      MonacoServices.install(this.editor, {rootUri: '/tmp/ls/'})
       const uri = monaco.Uri.parse(`/tmp/ls/Main.${_language}`)
       this.editor.setModel(monaco.editor.getModel(uri) || monaco.editor.createModel(this.state.value, _language, uri))
+    } else {
+      MonacoServices.install(this.editor)
     }
 
     const url = `ws://localhost:8999/${_language}`
@@ -98,7 +101,6 @@ class Editor extends React.Component {
     editor.focus()
 
     if (this.props.language !== 'plaintext') {
-      MonacoServices.install(editor, {rootUri: '/tmp/ls/'})
       this.createLanguageClient()
     }
   }
@@ -144,12 +146,6 @@ class Editor extends React.Component {
     }
   }
 
-  componentDidUpdate(prevProps) {
-    if (this.props.language !== prevProps.language) {
-      this.createLanguageClient()
-    }
-  }
-
   render() {
     const { language, readOnly } = this.props
     const options = {
@@ -163,6 +159,7 @@ class Editor extends React.Component {
     }
     return (
       <MonacoEditor
+        key={language}
         language={language}
         options={options}
         onChange={this.onChange}
