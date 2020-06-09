@@ -38,7 +38,7 @@ class LanguageServerWebSocketHandler(websocket.WebSocketHandler):
 
 if __name__ == "__main__":
     app = web.Application([
-        (r"/(\w+)", LanguageServerWebSocketHandler),
+        (r"/lsp/(\w+)", LanguageServerWebSocketHandler),
     ])
     app.listen(8999)
     ioloop.IOLoop.current().start()

@@ -52,8 +52,9 @@ class LanguageServer:
     @classmethod
     async def ccls(cls):
         #return await cls.create('clangd')
-        return await cls.create('ccls', r'--init={"clang": {"extraArgs": ["-isystem", "/usr/local/Cellar/gcc/9.3.0/include/c++/9.3.0"], "resourceDir": "/usr/local/Cellar/gcc/9.3.0/include/c++/9.3.0"}}')
+        #return await cls.create('ccls', r'--init={"clang": {"extraArgs": ["-isystem", "/usr/local/Cellar/gcc/9.3.0/include/c++/9.3.0"], "resourceDir": "/usr/local/Cellar/gcc/9.3.0/include/c++/9.3.0"}}')
+        return await cls.create('ccls')
 
     @classmethod
     async def javals(cls):
-        return await cls.create('/usr/local/opt/openjdk/bin/java', '-Declipse.application=org.eclipse.jdt.ls.core.id1', '-Dosgi.bundles.defaultStartLevel=4', '-Declipse.product=org.eclipse.jdt.ls.core.product', '-Dlog.protocol=true', '-Dlog.level=ALL', '-noverify', '-Xmx1G', '-jar', '/Users/ccw/Downloads/jdt-language-server-latest/plugins/org.eclipse.equinox.launcher_1.5.700.v20200207-2156.jar', '-configuration', '/Users/ccw/Downloads/jdt-language-server-latest/config_linux', '-data', '/tmp/ls', '--add-modules=ALL-SYSTEM', '--add-opens', 'java.base/java.util=ALL-UNNAMED', '--add-opens', 'java.base/java.lang=ALL-UNNAMED')
+        return await cls.create('java', '-Declipse.application=org.eclipse.jdt.ls.core.id1', '-Dosgi.bundles.defaultStartLevel=4', '-Declipse.product=org.eclipse.jdt.ls.core.product', '-Dlog.protocol=true', '-Dlog.level=ALL', '-noverify', '-Xmx1G', '-jar', '/opt/jdt-ls/plugins/org.eclipse.equinox.launcher_1.5.700.v20200207-2156.jar', '-configuration', '/opt/jdt-ls/config_linux', '-data', '/tmp/ls', '--add-modules=ALL-SYSTEM', '--add-opens', 'java.base/java.util=ALL-UNNAMED', '--add-opens', 'java.base/java.lang=ALL-UNNAMED')
