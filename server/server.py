@@ -86,7 +86,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         return exe_path
 
 
-    async def _run(self, language_config, src, max_cpu_time, max_real_time, max_memory, submission_id):
+    async def _run(self, language_config, src, max_cpu_time, max_real_time, max_memory, submission_id, input_content=None):
         # init
         compile_config = language_config.get("compile")
         run_config = language_config["run"]
@@ -98,12 +98,21 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
         with InitSubmissionEnv(WORKER_WORKSPACE_BASE, submission_id=str(submission_id)) as submission_dir:
             exe_path = await self._compile(submission_dir, compile_config=compile_config, run_config=run_config, src=src)
 
+            input_path = None
+
+            if self.input_content:
+                input_path = os.path.join(submission_dir, 'input')
+
+                async with AIOFile(input_path, "w", encoding="utf-8") as f:
+                    await f.write(self.input_content)
+
             kernel_client = KernelClient(run_config=language_config["run"],
                                          exe_path=exe_path,
                                          max_cpu_time=max_cpu_time,
                                          max_real_time=max_real_time,
                                          max_memory=max_memory,
-                                         io_sock_path="unix:" + io_sock_path)
+                                         io_sock_path="unix:" + io_sock_path,
+                                         input_path=input_path)
             run_result = await kernel_client.run()
             return run_result
 
