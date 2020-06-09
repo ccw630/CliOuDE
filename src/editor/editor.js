@@ -6,7 +6,10 @@ import {
     MonacoLanguageClient, CloseAction, ErrorAction,
     MonacoServices, createConnection
 } from 'monaco-languageclient';
-import ReconnectingWebSocket from 'reconnecting-websocket';
+import ReconnectingWebSocket from 'reconnecting-websocket'
+
+const lsp_supported_languages = ['python', 'javascript','c','cpp','shell', 'java']
+const lsp_inmemory_languages = ['python', 'shell', 'javascript']
 
 class Editor extends React.Component {
 
@@ -28,10 +31,10 @@ class Editor extends React.Component {
   createLanguageClient = () => {
     if (this.languageSocketListened) this.languageSocket.close()
     const _language = this.props.language
-    if (!['python', 'javascript','c','cpp','shell', 'java'].includes(_language)) {
+    if (!lsp_supported_languages.includes(_language)) {
       return
     }
-    if (!['python', 'shell', 'javascript'].includes(_language)) {
+    if (!lsp_inmemory_languages.includes(_language)) {
       MonacoServices.install(this.editor, {rootUri: '/tmp/ls/'})
       const uri = monaco.Uri.parse(`/tmp/ls/Main.${_language}`)
       this.editor.setModel(monaco.editor.getModel(uri) || monaco.editor.createModel(this.state.value, _language, uri))
@@ -49,7 +52,10 @@ class Editor extends React.Component {
           // create and start the language client
           const languageClient = createLanguageClient(connection)
           const disposable = languageClient.start()
-          connection.onClose(() => disposable.dispose())
+          connection.onClose(() => {
+            disposable.dispose()
+            this.languageSocketListened = false
+          })
           this.languageSocketListened = true
       }
     })
@@ -100,9 +106,7 @@ class Editor extends React.Component {
     editor.setValue(this.state.value)
     editor.focus()
 
-    if (this.props.language !== 'plaintext') {
-      this.createLanguageClient()
-    }
+    this.createLanguageClient()
   }
 
   reformat = () => this.editor.trigger('', 'editor.action.formatDocument')
@@ -153,7 +157,7 @@ class Editor extends React.Component {
       minimap: { enabled: false },
       automaticLayout: true,
       fontSize: "14px",
-      // wordBasedSuggestions: language !== "plaintext",
+      wordBasedSuggestions: !lsp_supported_languages.includes(language),
       contextmenu: false,
       readOnly: readOnly || false,
     }
