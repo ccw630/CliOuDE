@@ -135,13 +135,6 @@ void child_process(FILE *log_fp, struct config *_config) {
     if (_config->error_path != NULL) {
         if (strcmp(_config->error_path, _config->output_path) == 0) {
             error_fd = output_fd;
-        }
-        if (is_domain_socket(_config->output_path) == 0) {
-            if (strcmp(_config->output_path, _config->input_path) == 0) {
-                error_fd = input_fd;
-            } else {
-                error_fd = get_io_fd(log_fp, _config->error_path, "no-use");
-            }
         } else {
             error_fd = get_io_fd(log_fp, _config->error_path, "w");
         }
