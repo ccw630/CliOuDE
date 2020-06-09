@@ -42,7 +42,7 @@ class Editor extends React.Component {
       MonacoServices.install(this.editor)
     }
 
-    const url = `ws://localhost:8999/${_language}`
+    const url = `ws://${process.env.NODE_ENV === 'development' ? 'localhost:8999' : window.location.host}/lsp/${_language}`
     this.languageSocket = createWebSocket(url)
    
     // listen when the web socket is opened

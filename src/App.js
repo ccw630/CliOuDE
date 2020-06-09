@@ -85,10 +85,10 @@ function App() {
           type: 'code',
           data: {
             src: sourceEditor.current.getValue(),
-            language
+            language,
+            input_content: inputEditor.current && inputEditor.current.getValue() || null
           }
         }))
-        inputEditor.current && sendInput(inputEditor.current.getValue())
       }
     }
   })
