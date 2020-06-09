@@ -100,11 +100,11 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
 
             input_path = None
 
-            if self.input_content:
+            if input_content:
                 input_path = os.path.join(submission_dir, 'input')
 
                 async with AIOFile(input_path, "w", encoding="utf-8") as f:
-                    await f.write(self.input_content)
+                    await f.write(input_content)
 
             kernel_client = KernelClient(run_config=language_config["run"],
                                          exe_path=exe_path,
