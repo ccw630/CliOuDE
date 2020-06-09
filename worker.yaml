@@ -13,7 +13,7 @@ spec:
         app: worker
     spec:
       containers:
-      - image: registry-vpc.cn-shanghai.aliyuncs.com/clioude/worker:async
+      - image: registry-vpc.cn-shanghai.aliyuncs.com/clioude/worker
         name: worker
         env:
         - name: BACKEND_URL
