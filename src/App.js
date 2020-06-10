@@ -133,6 +133,7 @@ function App() {
               value={language}
               style={{ width: wide ? 330 : 120 }}
               onChange={value => {
+                setCode(sourceEditor.current.getValue())
                 localStorage.setItem('CLIOUDE_CODE', sourceEditor.current.getValue())
                 setLanguage(value)
                 localStorage.setItem('CLIOUDE_LANG', value)

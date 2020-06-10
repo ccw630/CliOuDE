@@ -8,15 +8,14 @@ import {
 } from 'monaco-languageclient';
 import ReconnectingWebSocket from 'reconnecting-websocket'
 
-const lsp_supported_languages = ['python', 'javascript','c','cpp','shell', 'java']
-const lsp_inmemory_languages = ['python', 'shell', 'javascript']
+const lsp_supported_languages = ['python', 'c', 'cpp', 'shell', 'java']
+const lsp_inmemory_languages = ['python', 'shell']
 
 class Editor extends React.Component {
 
   constructor(props) {
     super(props);
     this.state = {
-      value: props.code || '',
       lastPos: { line: 1, column: 1 },
       undo: false,
       input: '',
@@ -37,12 +36,12 @@ class Editor extends React.Component {
     if (!lsp_inmemory_languages.includes(_language)) {
       MonacoServices.install(this.editor, {rootUri: '/tmp/ls/'})
       const uri = monaco.Uri.parse(`/tmp/ls/Main.${_language}`)
-      this.editor.setModel(monaco.editor.getModel(uri) || monaco.editor.createModel(this.state.value, _language, uri))
+      this.editor.setModel(monaco.editor.getModel(uri) || monaco.editor.createModel(this.props.code, _language, uri))
     } else {
       MonacoServices.install(this.editor)
     }
 
-    const url = `ws://${process.env.NODE_ENV === 'development' ? 'localhost:8999' : window.location.host}/lsp/${_language}`
+    const url = `ws://${process.env.NODE_ENV === 'development' ? 'localhost:8998' : window.location.host}/lsp/${_language}`
     this.languageSocket = createWebSocket(url)
    
     // listen when the web socket is opened
@@ -95,7 +94,6 @@ class Editor extends React.Component {
   }
 
   editorDidMount = (editor) => {
-    console.log('editorDidMount')
     this.editor = editor
     
     editor.onDidChangeCursorPosition(e => {
@@ -103,10 +101,11 @@ class Editor extends React.Component {
         this.editor.setPosition({ lineNumber: this.state.lastPos.line, column: this.state.lastPos.column })
       }
     })
-    editor.setValue(this.state.value)
-    editor.focus()
 
     this.createLanguageClient()
+
+    editor.setValue(this.props.code || '')
+    editor.focus()
   }
 
   reformat = () => this.editor.trigger('', 'editor.action.formatDocument')
