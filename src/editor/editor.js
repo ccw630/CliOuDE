@@ -8,7 +8,7 @@ import {
 } from 'monaco-languageclient';
 import ReconnectingWebSocket from 'reconnecting-websocket'
 
-const lsp_supported_languages = ['python', 'c', 'cpp', 'shell', 'java']
+const lsp_supported_languages = ['python', 'c', 'cpp', 'shell', 'java', 'kotlin']
 const lsp_inmemory_languages = ['python', 'shell']
 
 class Editor extends React.Component {
@@ -96,11 +96,11 @@ class Editor extends React.Component {
   editorDidMount = (editor) => {
     this.editor = editor
     
-    editor.onDidChangeCursorPosition(e => {
-      if (this.invalidPosition(e.position.lineNumber, e.position.column)) {
-        this.editor.setPosition({ lineNumber: this.state.lastPos.line, column: this.state.lastPos.column })
-      }
-    })
+    // editor.onDidChangeCursorPosition(e => {
+    //   if (this.invalidPosition(e.position.lineNumber, e.position.column)) {
+    //     this.editor.setPosition({ lineNumber: this.state.lastPos.line, column: this.state.lastPos.column })
+    //   }
+    // })
 
     this.createLanguageClient()
 

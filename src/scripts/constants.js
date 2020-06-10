@@ -31,7 +31,7 @@ export const languageDescMap = {
   'Java': 'Java (OpenJDK 11.0.7)',
   'Python3': 'Python (Python 3.8.2)',
   'JavaScript': 'JavaScript (Node.js v12.16.3)',
-  // 'Scala': 'Scala (Scala 2.13.0)'
+  'Kotlin': 'Kotlin (Kotlin 1.3.50)'
 }
 
 export const languageModeMap = {
@@ -41,7 +41,7 @@ export const languageModeMap = {
   'Java': 'java',
   'Python3': 'python',
   'JavaScript': 'javascript',
-  'Scala': 'scala'
+  'Kotlin': 'kotlin'
 }
 
 export const languageCodeMap = {
@@ -51,5 +51,5 @@ export const languageCodeMap = {
   'Java': 'public class Main {\n\tpublic static void main(String[] args) {\n\t\tSystem.out.println("hello, world");\n\t}\n}\n',
   'Python3': 'print("hello, world")\n',
   'JavaScript': 'console.log("hello, world")\n',
-  'Scala': 'object Main extends App {\n\tprintln("hello, world")\n}\n'
+  'Kotlin': 'fun main() {\n\tprintln("hello, world")\n}\n'
 }

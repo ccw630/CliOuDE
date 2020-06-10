@@ -44,7 +44,7 @@ function App() {
 
   document.onkeydown = (e) => {
     var keyCode = e.keyCode || e.which;
-    if (e.altKey && keyCode === (running ? 84 : 82)) { // F9
+    if (e.altKey && keyCode === (running ? 84 : 82)) {
       e.preventDefault();
       handleRun();
     }
@@ -196,6 +196,7 @@ function App() {
                 <Editor
                   language="plaintext"
                   consoleMode={true}
+                  sendInput={()=>{}}
                   ref={outputEditor}
                 />
               </div>
