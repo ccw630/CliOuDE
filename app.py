@@ -13,8 +13,6 @@ language_servers = {
     # 'javascript': LanguageServer.jsls,
     'cpp': LanguageServer.ccls,
     'c': LanguageServer.ccls,
-    'cppl': LanguageServer.clangls,
-    'cl': LanguageServer.clangls,
     'shell': LanguageServer.bashls,
     'java': LanguageServer.javals
 }

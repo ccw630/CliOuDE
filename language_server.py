@@ -54,9 +54,5 @@ class LanguageServer:
         return await cls.create('ccls')
 
     @classmethod
-    async def clangls(cls):
-        return await cls.create('clangd')
-
-    @classmethod
     async def javals(cls):
         return await cls.create('java', '-Declipse.application=org.eclipse.jdt.ls.core.id1', '-Dosgi.bundles.defaultStartLevel=4', '-Declipse.product=org.eclipse.jdt.ls.core.product', '-Dlog.protocol=true', '-Dlog.level=ALL', '-noverify', '-Xmx1G', '-jar', '/opt/jdt-ls/plugins/org.eclipse.equinox.launcher_1.5.700.v20200207-2156.jar', '-configuration', '/opt/jdt-ls/config_linux', '-data', '/tmp/ls', '--add-modules=ALL-SYSTEM', '--add-opens', 'java.base/java.util=ALL-UNNAMED', '--add-opens', 'java.base/java.lang=ALL-UNNAMED')
