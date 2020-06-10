@@ -96,7 +96,9 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             raise ValueError("IO Sock not found")
 
         with InitSubmissionEnv(WORKER_WORKSPACE_BASE, submission_id=str(submission_id)) as submission_dir:
+            self.write_message(json.dumps({'type': 'result', 'data': {'result': -5}}))
             exe_path = await self._compile(submission_dir, compile_config=compile_config, run_config=run_config, src=src)
+            self.write_message(json.dumps({'type': 'result', 'data': {'result': -6}}))
 
             input_path = None
 
