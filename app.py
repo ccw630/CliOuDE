@@ -14,7 +14,8 @@ language_servers = {
     'cpp': LanguageServer.ccls,
     'c': LanguageServer.ccls,
     'shell': LanguageServer.bashls,
-    'java': LanguageServer.javals
+    'java': LanguageServer.javals,
+    'scala': LanguageServer.scalals
 }
 
 
