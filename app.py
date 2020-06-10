@@ -10,9 +10,11 @@ log = logging.getLogger(__name__)
 
 language_servers = {
     'python': LanguageServer.pyls,
-    'javascript': LanguageServer.jsls,
+    # 'javascript': LanguageServer.jsls,
     'cpp': LanguageServer.ccls,
     'c': LanguageServer.ccls,
+    'cppl': LanguageServer.clangls,
+    'cl': LanguageServer.clangls,
     'shell': LanguageServer.bashls,
     'java': LanguageServer.javals
 }
