@@ -1,4 +1,6 @@
 export const statusMap = {
+  '-6': 'processing',
+  '-5': 'processing',
   '-4': 'default',
   '-3': 'error',
   '-2': 'default',
@@ -12,10 +14,12 @@ export const statusMap = {
 }
 
 export const statusDescMap = {
+  '-6': '运行中 - Running',
+  '-5': '编译中 - Compiling',
   '-4': '已停止 - Terminated',
   '-3': '编译错误 - Compile Error',
   '-2': '暂无输出 - NULL',
-  '-1': '运行中 - Running',
+  '-1': '提交中 - Submitting',
   '0': '运行成功 - Success',
   '1': '运行超时 - Time Limit Exceeded',
   '2': '时间超限 - Time Limit Exceeded',
@@ -31,7 +35,8 @@ export const languageDescMap = {
   'Java': 'Java (OpenJDK 11.0.7)',
   'Python3': 'Python (Python 3.8.2)',
   'JavaScript': 'JavaScript (Node.js v12.16.3)',
-  'Kotlin': 'Kotlin (Kotlin 1.3.50)'
+  'Kotlin': 'Kotlin (Kotlin 1.3.50)',
+  'Scala': 'Scala (Scala 2.13.0)'
 }
 
 export const languageModeMap = {
@@ -41,7 +46,8 @@ export const languageModeMap = {
   'Java': 'java',
   'Python3': 'python',
   'JavaScript': 'javascript',
-  'Kotlin': 'kotlin'
+  'Kotlin': 'kotlin',
+  'Scala': 'scala'
 }
 
 export const languageCodeMap = {
@@ -51,5 +57,6 @@ export const languageCodeMap = {
   'Java': 'public class Main {\n\tpublic static void main(String[] args) {\n\t\tSystem.out.println("hello, world");\n\t}\n}\n',
   'Python3': 'print("hello, world")\n',
   'JavaScript': 'console.log("hello, world")\n',
-  'Kotlin': 'fun main() {\n\tprintln("hello, world")\n}\n'
+  'Kotlin': 'fun main() {\n\tprintln("hello, world")\n}\n',
+  'Scala': 'object Main extends App {\n\tprintln("hello, world")\n}\n'
 }

@@ -7,9 +7,14 @@ import {
     MonacoServices, createConnection
 } from 'monaco-languageclient';
 import ReconnectingWebSocket from 'reconnecting-websocket'
+import * as scala from './languages/scala'
 
-const lsp_supported_languages = ['python', 'c', 'cpp', 'shell', 'java', 'kotlin']
+const lsp_supported_languages = ['python', 'c', 'cpp', 'shell', 'java']
 const lsp_inmemory_languages = ['python', 'shell']
+
+monaco.languages.register({ id: 'scala' })
+monaco.languages.setMonarchTokensProvider('scala', scala.language)
+monaco.languages.setLanguageConfiguration('scala', scala.conf)
 
 class Editor extends React.Component {
 

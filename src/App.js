@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Layout, Row, Col, Switch, Typography, Badge, Space, Select, Button } from 'antd'
-import { CloudServerOutlined, FileTextOutlined, CodeOutlined, CaretRightOutlined, CloseOutlined, ReloadOutlined, AlignLeftOutlined } from '@ant-design/icons'
+import { CloudServerOutlined, FileTextOutlined, CodeOutlined, CaretRightOutlined, CloseOutlined, ReloadOutlined } from '@ant-design/icons'
 
 import Editor from './editor/editor'
 import { statusMap, statusDescMap, languageDescMap, languageModeMap, languageCodeMap } from './scripts/constants'
@@ -15,6 +15,8 @@ const sourceEditor = React.createRef()
 const inputEditor = React.createRef()
 const outputEditor = React.createRef()
 const consoleEditor = React.createRef()
+
+const runningStatus = [-1, -5, -6]
 
 function App() {
   const wide = document.documentElement.clientWidth >= 768
@@ -56,7 +58,7 @@ function App() {
         const data = JSON.parse(msg.data)
         if (data.type === 'result') {
           const result = data.data.result
-          if (result !== -1) {
+          if (!runningStatus.includes(result)) {
             setRunning(false)
             if (result === -3 || result === 5) {
               data.data.err && writeOutput(data.data.err.replace(/\/worker\/run\/\S+\//g, ''))
@@ -75,7 +77,7 @@ function App() {
             }
             if (extra) setTimeout(() => writeOutput(extra), 200)
           }
-          setExecStatus(data.data.result)
+          setExecStatus(result)
         } else if (data.type === 'output') {
           writeOutput(data.data)
         }
@@ -115,9 +117,6 @@ function App() {
           {wide && <Button type="link" ghost onClick={() => sourceEditor.current.setValue(languageCodeMap[language])}>
             <ReloadOutlined />
           </Button>}
-          {false && <Button type="link" ghost onClick={() => sourceEditor.current.reformat()}>
-            <AlignLeftOutlined />
-          </Button>}
         </Space>
         <div className="rightHeader">
           <Space>
@@ -125,7 +124,7 @@ function App() {
               checkedChildren="输入: 开"
               unCheckedChildren="输入: 关"
               checked={needInput}
-              disabled={execStatus === -1}
+              disabled={runningStatus.includes(execStatus)}
               size="big"
               onChange={(checked, e) => setNeedInput(checked)}
             />}
