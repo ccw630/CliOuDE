@@ -58,5 +58,5 @@ class LanguageServer:
         return await cls.create('/usr/bin/java', '-Declipse.application=org.eclipse.jdt.ls.core.id1', '-Dosgi.bundles.defaultStartLevel=4', '-Declipse.product=org.eclipse.jdt.ls.core.product', '-Dlog.protocol=true', '-Dlog.level=ALL', '-noverify', '-Xmx1G', '-jar', '/opt/jdt-ls/plugins/org.eclipse.equinox.launcher_1.5.700.v20200207-2156.jar', '-configuration', '/opt/jdt-ls/config_linux', '-data', '/tmp/ls', '--add-modules=ALL-SYSTEM', '--add-opens', 'java.base/java.util=ALL-UNNAMED', '--add-opens', 'java.base/java.lang=ALL-UNNAMED')
 
     @classmethod
-    async def scalals(cls):
-        return await cls.create('/usr/local/bin/metals')
+    async def ktls(cls):
+        return await cls.create('/opt/kt-ls/bin/kotlin-language-server')

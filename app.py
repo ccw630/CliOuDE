@@ -15,7 +15,7 @@ language_servers = {
     'c': LanguageServer.ccls,
     'shell': LanguageServer.bashls,
     'java': LanguageServer.javals,
-    'scala': LanguageServer.scalals
+    'kotlin': LanguageServer.ktls
 }
 
 
