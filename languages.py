@@ -23,7 +23,7 @@ _c_lang_config = {
         "max_cpu_time": 3000,
         "max_real_time": 10000,
         "max_memory": 512 * 1024 * 1024,
-        "compile_command": "/usr/bin/gcc -DONLINE_JUDGE -O2 -w -fmax-errors=3 -std=c11 {src_path} -lm -o {exe_path}",
+        "compile_command": "/usr/bin/gcc -O2 -w -fmax-errors=3 -std=c11 {src_path} -lm -o {exe_path}",
     },
     "run": {
         "command": "{exe_path}",
@@ -39,7 +39,39 @@ _cpp_lang_config = {
         "max_cpu_time": 10000,
         "max_real_time": 20000,
         "max_memory": 1024 * 1024 * 1024,
-        "compile_command": "/usr/bin/g++ -DONLINE_JUDGE -O2 -w -fmax-errors=3 -std=c++17 {src_path} -lm -o {exe_path}",
+        "compile_command": "/usr/bin/g++ -O2 -w -fmax-errors=3 -std=c++17 {src_path} -lm -o {exe_path}",
+    },
+    "run": {
+        "command": "{exe_path}",
+        "seccomp_rule": "c_cpp",
+        "env": default_env
+    }
+}
+
+_clang_lang_config = {
+    "compile": {
+        "src_name": "main.c",
+        "exe_name": "main",
+        "max_cpu_time": 3000,
+        "max_real_time": 10000,
+        "max_memory": 512 * 1024 * 1024,
+        "compile_command": "/usr/bin/clang -O2 -w -fmax-errors=3 -std=c11 {src_path} -lm -o {exe_path}",
+    },
+    "run": {
+        "command": "{exe_path}",
+        "seccomp_rule": "c_cpp",
+        "env": default_env
+    }
+}
+
+_clangpp_lang_config = {
+    "compile": {
+        "src_name": "main.cpp",
+        "exe_name": "main",
+        "max_cpu_time": 10000,
+        "max_real_time": 20000,
+        "max_memory": 1024 * 1024 * 1024,
+        "compile_command": "/usr/bin/clang++ -O2 -w -fmax-errors=3 -std=c++17 {src_path} -lm -o {exe_path}",
     },
     "run": {
         "command": "{exe_path}",
@@ -156,6 +188,8 @@ languages = {
     "Bash": _bash_lang_config,
     "C": _c_lang_config,
     "C++": _cpp_lang_config,
+    "Clang": _clang_lang_config,
+    "Clang++": _clangpp_lang_config,
     "Java": _java_lang_config,
     "Python3": _py3_lang_config,
     "JavaScript": _js_lang_config,
