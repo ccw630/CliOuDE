@@ -39,6 +39,7 @@ function App() {
       outputEditor.current && outputEditor.current.clear()
       consoleEditor.current && consoleEditor.current.clear()
       setWs(new WebSocket(`ws://${process.env.NODE_ENV === 'development' ? 'localhost:8081' : window.location.host}/api/run`))
+      setExecStatus(-2)
       setRunning(true)
     }
     setExtraInfo('')
