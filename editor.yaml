@@ -13,7 +13,7 @@ spec:
         app: editor
     spec:
       containers:
-      - image: registry-vpc.cn-shanghai.aliyuncs.com/clioude/editor
+      - image: registry.cn-shanghai.aliyuncs.com/clioude/editor
         name: editor
         ports:
         - containerPort: 80

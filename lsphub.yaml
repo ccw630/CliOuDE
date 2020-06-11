@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lsphub
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: lsphub
+  template:
+    metadata:
+      labels:
+        app: lsphub
+    spec:
+      containers:
+      - image: registry.cn-shanghai.aliyuncs.com/clioude/lsphub
+        name: lsphub
+        ports:
+        - containerPort: 8999
+        volumeMounts:
+        - mountPath: /tmp
+          name: lsphub-tmpfs0
+      volumes:
+      - emptyDir:
+          medium: Memory
+        name: lsphub-tmpfs0
+      restartPolicy: Always
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: autoscale-lsphub
+  namespace: default
+spec:
+  maxReplicas: 10
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: lsphub
+  targetCPUUtilizationPercentage: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lsphub
+spec:
+  ports:
+  - port: 8999
+  selector:
+    app: lsphub
