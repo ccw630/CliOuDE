@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 import os
 
-engine = create_engine(os.getenv('DB_URL'))
+engine = create_engine(os.getenv('DB_URL'), isolation_level='SERIALIZABLE')
 Base = declarative_base()
 session = sessionmaker(bind=engine)
 db = session()
