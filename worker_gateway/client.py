@@ -108,4 +108,3 @@ class WebSocketClient:
 
     def on_close(self):
         self._disconnect()
-        Worker.return_worker_quota(self.worker_hostname)

@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 import os
 
-engine = create_engine(os.getenv('DB_URL'), isolation_level='SERIALIZABLE')
+engine = create_engine(os.getenv('DB_URL'))
 Base = declarative_base()
 session = sessionmaker(bind=engine)
 db = session()
@@ -28,35 +28,10 @@ class Worker(Base):
 
     @classmethod
     def choose_worker(cls):
-        try:
-            db.begin(subtransactions=True)
-            worker = db.query(cls).filter(cls.last_heartbeat + timedelta(seconds=6) >= datetime.now()).order_by(cls.task_number).first()
-            if not worker:
-                db.commit()
-                return None
-            worker.task_number += 1
-            db.add(worker)
-            db.commit()
-        except Exception as e:
-            db.rollback()
-            raise e
+        worker = db.query(cls).filter(cls.last_heartbeat + timedelta(seconds=6) >= datetime.now()).order_by(cls.cpu_usage).first()
+        if not worker:
+            return None
         return worker
-
-
-    @classmethod
-    def return_worker_quota(cls, hostname):
-        try:
-            db.begin(subtransactions=True)
-            worker = db.query(cls).filter(cls.hostname == hostname).first()
-            if not worker:
-                db.commit()
-                return
-            worker.task_number -= 1
-            db.add(worker)
-            db.commit()
-        except Exception as e:
-            db.rollback()
-            raise e
 
 
     @classmethod
