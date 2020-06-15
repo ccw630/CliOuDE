@@ -1,4 +1,5 @@
 export const statusMap = {
+  '-7': 'processing',
   '-6': 'processing',
   '-5': 'processing',
   '-4': 'default',
@@ -14,6 +15,7 @@ export const statusMap = {
 }
 
 export const statusDescMap = {
+  '-7': '等待中 - Waiting',
   '-6': '运行中 - Running',
   '-5': '编译中 - Compiling',
   '-4': '已停止 - Terminated',

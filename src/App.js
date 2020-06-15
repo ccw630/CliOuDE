@@ -39,7 +39,7 @@ function App() {
       outputEditor.current && outputEditor.current.clear()
       consoleEditor.current && consoleEditor.current.clear()
       setWs(new WebSocket(`ws://${process.env.NODE_ENV === 'development' ? 'localhost:8081' : window.location.host}/api/run`))
-      setExecStatus(-2)
+      setExecStatus(-7)
       setRunning(true)
     }
     setExtraInfo('')
@@ -131,7 +131,7 @@ function App() {
             />}
             <Select
               value={language}
-              style={{ width: wide ? 330 : 120 }}
+              style={{ width: wide ? 330 : 100 }}
               onChange={value => {
                 setCode(sourceEditor.current.getValue())
                 localStorage.setItem('CLIOUDE_CODE', sourceEditor.current.getValue())
