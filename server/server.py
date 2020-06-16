@@ -102,7 +102,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
 
             input_path = None
 
-            if input_content:
+            if input_content is None:
                 input_path = os.path.join(submission_dir, 'input')
 
                 async with AIOFile(input_path, "w", encoding="utf-8") as f:
