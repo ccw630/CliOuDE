@@ -89,7 +89,7 @@ function App() {
           data: {
             src: sourceEditor.current.getValue(),
             language,
-            input_content: inputEditor.current && inputEditor.current.getValue() || null
+            input_content: inputEditor.current ? inputEditor.current.getValue() : null
           }
         }))
       }
