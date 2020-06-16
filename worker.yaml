@@ -24,6 +24,10 @@ spec:
           value: YOUR_TOKEN_HERE
         ports:
         - containerPort: 8080
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1024Mi
         securityContext:
           capabilities:
             drop:

@@ -17,6 +17,10 @@ spec:
         name: lsphub
         ports:
         - containerPort: 8999
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
         volumeMounts:
         - mountPath: /tmp
           name: lsphub-tmpfs0

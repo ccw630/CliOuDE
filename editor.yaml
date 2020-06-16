@@ -20,6 +20,10 @@ spec:
         volumeMounts:
         - mountPath: /etc/nginx/conf.d
           name: config
+        resources:
+          requests:
+            cpu: 250m
+            memory: 512Mi
       restartPolicy: Always
       volumes:
       - name: config
