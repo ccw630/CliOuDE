@@ -1,7 +1,7 @@
 import { Selector } from 'testcafe'
 
 fixture('Blocked Run')
-    .page('http://localhost:3000')
+    .page('http://clioude.space')
 
 test('os.system', async t => {
     await t.click('#languages').click('#language-Python3')

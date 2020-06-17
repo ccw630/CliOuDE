@@ -1,7 +1,7 @@
 import { Selector } from 'testcafe'
 
 fixture('Normal Run Example')
-    .page('http://localhost:3000')
+    .page('http://clioude.space')
 
 test('C++', async t => {
     await t.click('#trigger')

@@ -1,7 +1,7 @@
 import { Selector } from 'testcafe'
 
 fixture('Autocomplete')
-    .page('http://localhost:3000')
+    .page('http://clioude.space')
 
 test('Python', async t => {
     await t.click('#languages').click('#language-Python3')
