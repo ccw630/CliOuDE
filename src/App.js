@@ -115,7 +115,7 @@ function App() {
         <Space className="logo">
           {wide && <CloudServerOutlined />}
           CliOuDE
-          {wide && <Button type="link" ghost onClick={() => sourceEditor.current.setValue(languageCodeMap[language])}>
+          {wide && <Button id="reset" type="link" ghost onClick={() => sourceEditor.current.setValue(languageCodeMap[language])}>
             <ReloadOutlined />
           </Button>}
         </Space>
@@ -132,6 +132,7 @@ function App() {
             <Select
               value={language}
               style={{ width: wide ? 330 : 100 }}
+              id="languages"
               onChange={value => {
                 setCode(sourceEditor.current.getValue())
                 localStorage.setItem('CLIOUDE_CODE', sourceEditor.current.getValue())
@@ -139,9 +140,9 @@ function App() {
                 localStorage.setItem('CLIOUDE_LANG', value)
               }}
             >
-              {Object.keys(languageDescMap).map(k => <Option value={k}>{languageDescMap[k]}</Option>)}
+              {Object.keys(languageDescMap).map(k => <Option value={k} id={`language-${k}`}>{languageDescMap[k]}</Option>)}
             </Select>
-            <Button type="primary" icon={running ? <CloseOutlined /> : <CaretRightOutlined />} onClick={handleRun} danger={running}>
+            <Button type="primary" id="trigger" icon={running ? <CloseOutlined /> : <CaretRightOutlined />} onClick={handleRun} danger={running}>
               {wide && (running ? "停止(⌥ + T)" : "运行(⌥ + R)")}
             </Button>
           </Space>
@@ -174,7 +175,7 @@ function App() {
               </Col>
               <Col span={12} style={{"textAlign": "right"}}>
                 <Space>
-                  <Badge status={statusMap[execStatus]} text={statusDescMap[execStatus] + extraInfo} />
+                  <Badge id="status" status={statusMap[execStatus]} text={statusDescMap[execStatus] + extraInfo} />
                 </Space>
               </Col>
             </Row>
