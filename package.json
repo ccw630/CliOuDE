@@ -1,0 +1,14 @@
+{
+  "name": "clioude-tester",
+  "version": "1.0.0",
+  "description": "",
+  "dependencies": {
+    "testcafe": "^1.8.6"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "npx testcafe chrome test_cases"
+  },
+  "author": "ccw630",
+  "license": "MIT"
+}
