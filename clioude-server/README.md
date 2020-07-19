@@ -1,2 +1,2 @@
-# CLIOUDE - Server
+# CliOuDE - Server
 

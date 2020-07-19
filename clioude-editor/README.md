@@ -1,3 +1,1 @@
-# CLIOUDE-Editor
-
-http://clioude.space/
+# CliOuDE-Editor
