@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      containers:
+      - image: registry.cn-shanghai.aliyuncs.com/clioude/worker
+        name: worker
+        env:
+        - name: BACKEND_URL
+          value: http://server:8080/api/heartbeat
+        - name: SERVICE_URL
+          value: ws://worker1:8080
+        - name: TOKEN
+          value: YOUR_TOKEN_HERE
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 2048Mi
+        securityContext:
+          capabilities:
+            drop:
+            - SETPCAP
+            - MKNOD
+            - NET_BIND_SERVICE
+            - SYS_CHROOT
+            - SETFCAP
+            - FSETID
+        volumeMounts:
+        - mountPath: /tmp
+          name: worker-tmpfs0
+        livenessProbe:
+          exec:
+            command:
+            - python3
+            - /code/service.py
+          periodSeconds: 5
+      volumes:
+      - emptyDir:
+          medium: Memory
+        name: worker-tmpfs0
+      restartPolicy: Always
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: autoscale-worker1
+  namespace: default
+spec:
+  maxReplicas: 10
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: worker
+  targetCPUUtilizationPercentage: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: worker1
+spec:
+  ports:
+  - port: 8080
+  selector:
+    app: worker
