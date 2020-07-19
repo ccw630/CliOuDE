@@ -1,1 +1,4 @@
 argtable3.* linguist-vendored=true
+jdt-language-server linguist-vendored=true
+kt-ls linguist-vendored=true
+sdkman linguist-vendored=true
