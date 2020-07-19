@@ -1,0 +1,8 @@
+.vscode/
+
+kernel/build/
+output/
+
+.DS_Store
+
+__pycache__/
