@@ -1,0 +1,67 @@
+version: "3"
+services:
+    worker:
+        image: registry.cn-shanghai.aliyuncs.com/clioude/worker
+        container_name: worker
+        restart: always
+        read_only: true
+        cap_drop:
+            - SETPCAP
+            - MKNOD
+            - NET_BIND_SERVICE
+            - SYS_CHROOT
+            - SETFCAP
+            - FSETID
+        tmpfs:
+            - /tmp
+        volumes:
+            - $PWD/log:/log
+            - $PWD/worker:/worker
+        environment:
+            - BACKEND_URL=http://server:8080/api/heartbeat
+            - SERVICE_URL=ws://worker:8080
+            - TOKEN=YOUR_TOKEN_HERE
+            # - worker_debug=1
+
+    server:
+        image: registry.cn-shanghai.aliyuncs.com/clioude/server
+        container_name: server
+        restart: always
+        depends_on:
+            - postgres
+            - worker
+        environment:
+            - DB_URL=postgresql://clioude:clioude@postgres/clioude
+            - WORKER_TOKEN=YOUR_TOKEN_HERE
+        ports:
+            - "0.0.0.0:8081:8080"
+    lsphub:
+        image: registry.cn-shanghai.aliyuncs.com/clioude/lsphub
+        container_name: lsphub
+        restart: always
+        tmpfs:
+            - /tmp
+        ports:
+            - "0.0.0.0:8998:8999"
+    editor:
+        image: registry.cn-shanghai.aliyuncs.com/clioude/editor
+        container_name: editor
+        restart: always
+        depends_on:
+            - server
+        volumes:
+            - $PWD/nginx/default.conf:/etc/nginx/conf.d/default.conf
+        ports:
+            - "0.0.0.0:80:80"
+    postgres:
+        image: postgres:10-alpine
+        container_name: db
+        restart: always
+        volumes:
+          - $PWD/data/postgres:/var/lib/postgresql/data
+        environment:
+          - POSTGRES_DB=clioude
+          - POSTGRES_USER=clioude
+          - POSTGRES_PASSWORD=clioude
+        ports:
+          - "5432:5432"
