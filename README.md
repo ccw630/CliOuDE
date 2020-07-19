@@ -2,7 +2,7 @@
 
 ## 单机部署(docker-compose)
 
-同时启动 Editor、Server、Worker 及数据库存储(PostgreSQL)容器。
+同时启动 Editor、Server、Worker、LSP Hub 及数据库存储(PostgreSQL)容器。
 
 ### 依赖
 
@@ -10,6 +10,7 @@
 
 ### 使用方式
 ```sh
+cd docker
 docker-compose pull
 docker-compose up -d
 ```
@@ -19,10 +20,11 @@ docker-compose up -d
 
 ## 分布式部署(k8s)
 
-### Tested on Aliyun Serverless Kubernetes
+- [x] Tested on Aliyun Serverless Kubernetes
 
 ### 部署顺序
 ```sh
+cd k8s
 kubectl create -f nginx.yaml    # nginx config map 配置
 kubectl create -f postgres.yaml # 起 DB 前，先挂载云盘，建立存储声明；server 启动执行 alembic 依赖 DB
 kubectl create -f server.yaml   # worker heartbeat 依赖 server；editor nginx 代理依赖 server 地址
