@@ -1,4 +1,4 @@
-# CLIOUDE LSP Hub
+# CliOuDE LSP Hub
 
 A proxy to various language servers.
 

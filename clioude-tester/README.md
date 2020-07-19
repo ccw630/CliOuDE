@@ -1,4 +1,4 @@
-# CLIOUDE-Tester
+# CliOuDE-Tester
 
 Performs end-to-end web testing to CliOuDE.
 
