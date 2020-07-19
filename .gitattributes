@@ -1,4 +1,4 @@
 argtable3.* linguist-vendored=true
-clioude-runenv/jdt-language-server/* linguist-vendored=true
-clioude-runenv/kt-ls/* linguist-vendored=true
-clioude-runenv/sdkman/* linguist-vendored=true
+clioude-runenv/jdt-language-server/**/* linguist-vendored=true
+clioude-runenv/kt-ls/**/* linguist-vendored=true
+clioude-runenv/sdkman/**/* linguist-vendored=true
