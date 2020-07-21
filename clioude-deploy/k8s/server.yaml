@@ -13,7 +13,7 @@ spec:
         app: server
     spec:
       containers:
-      - image: registry.cn-shanghai.aliyuncs.com/clioude/server
+      - image: ccw630/clioude-server
         name: server
         env:
         - name: DB_URL

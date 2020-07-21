@@ -13,7 +13,7 @@ spec:
         app: lsphub
     spec:
       containers:
-      - image: registry.cn-shanghai.aliyuncs.com/clioude/lsphub
+      - image: ccw630/clioude-lsphub
         name: lsphub
         ports:
         - containerPort: 8999

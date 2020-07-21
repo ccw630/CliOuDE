@@ -13,7 +13,7 @@ spec:
         app: worker
     spec:
       containers:
-      - image: registry.cn-shanghai.aliyuncs.com/clioude/worker
+      - image: ccw630/clioude-worker
         name: worker
         env:
         - name: BACKEND_URL

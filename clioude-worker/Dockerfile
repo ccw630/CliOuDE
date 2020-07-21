@@ -1,4 +1,4 @@
-FROM registry.cn-shanghai.aliyuncs.com/clioude/runenv
+FROM ccw630/clioude-runenv
 
 COPY kernel /tmp/kernel
 
