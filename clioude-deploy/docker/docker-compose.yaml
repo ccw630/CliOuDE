@@ -1,7 +1,7 @@
 version: "3"
 services:
     worker:
-        image: registry.cn-shanghai.aliyuncs.com/clioude/worker
+        image: ccw630/clioude-worker
         container_name: worker
         restart: always
         read_only: true
@@ -24,7 +24,7 @@ services:
             # - worker_debug=1
 
     server:
-        image: registry.cn-shanghai.aliyuncs.com/clioude/server
+        image: ccw630/clioude-server
         container_name: server
         restart: always
         depends_on:
@@ -36,7 +36,7 @@ services:
         ports:
             - "0.0.0.0:8081:8080"
     lsphub:
-        image: registry.cn-shanghai.aliyuncs.com/clioude/lsphub
+        image: ccw630/clioude-lsphub
         container_name: lsphub
         restart: always
         tmpfs:
@@ -44,7 +44,7 @@ services:
         ports:
             - "0.0.0.0:8998:8999"
     editor:
-        image: registry.cn-shanghai.aliyuncs.com/clioude/editor
+        image: ccw630/clioude-editor
         container_name: editor
         restart: always
         depends_on:

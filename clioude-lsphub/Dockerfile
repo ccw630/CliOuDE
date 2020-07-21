@@ -1,4 +1,4 @@
-FROM registry.cn-shanghai.aliyuncs.com/clioude/runenv
+FROM ccw630/clioude-runenv
 
 RUN pip3 install --no-cache-dir tornado
 
