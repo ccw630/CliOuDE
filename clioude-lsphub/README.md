@@ -10,4 +10,4 @@ Designed for code snippets, not full projects.
 - [x] Kotlin
 - [x] Python
 
-Build with [base image](https://github.com/ccw630/CLIOUDE-runenv).
+Build with [base image](https://hub.docker.com/repository/docker/ccw630/clioude-runenv).
