@@ -1,7 +1,8 @@
 import { Selector } from 'testcafe'
+import { MAIN_URL } from '../utils/const'
 
 fixture('Normal Run Example')
-    .page('http://clioude.space')
+    .page(MAIN_URL)
 
 test('C++', async t => {
     await t.click('#trigger')
