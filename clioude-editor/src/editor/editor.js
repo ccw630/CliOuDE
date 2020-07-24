@@ -144,7 +144,7 @@ class Editor extends React.Component {
     } else if (invalid) {
       this.setState({ appending: true }, () => this.editor.trigger('', 'undo'))
     } else {
-      if (!this.state.appending && e.changes.some(x => x.text === '\n')) {
+      if (!this.state.appending && e.changes.some(x => x.text === '\n' || x.text === '\r')) {
         const endColumn = 1, endLineNumber = this.editor.getModel().getLineCount()
         const startColumn = this.state.lastPos.column, startLineNumber = this.state.lastPos.line
         this.props.sendInput(this.editor.getModel().getValueInRange({ endColumn, endLineNumber, startColumn, startLineNumber }))
