@@ -1,0 +1,46 @@
+name: Deploy & End to End Test
+
+on:
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: dorny/paths-filter@v2.2.0
+      id: filter
+      with:
+        filters: |
+          editor:
+            - 'clioude-editor/**/*'
+          server:
+            - 'clioude-server/**/*'
+          worker:
+            - 'clioude-worker/**/*'
+          lsphub:
+            - 'clioude-lsphub/**/*'
+          runenv:
+            - 'clioude-runenv/**/*'
+    - name: build editor
+      if: steps.filter.outputs.editor == 'true'
+      run: docker build clioude-editor --tag ccw630/clioude-editor
+    - name: build server
+      if: steps.filter.outputs.server == 'true'
+      run: docker build clioude-server --tag ccw630/clioude-server
+    - name: build runenv
+      if: steps.filter.outputs.runenv == 'true'
+      run: docker build clioude-runenv --tag ccw630/clioude-runenv
+    - name: build worker
+      if: steps.filter.outputs.runenv == 'true' || steps.filter.outputs.worker == 'true'
+      run: docker build clioude-worker --tag ccw630/clioude-worker
+    - name: build lsphub
+      if: steps.filter.outputs.runenv == 'true' || steps.filter.outputs.lsphub == 'true'
+      run: docker build clioude-lsphub --tag ccw630/clioude-lsphub:latest
+    - name: Deploy
+      run: docker-compose -f clioude-deploy/docker/docker-compose.yaml up -d
+    - name: Run tests
+      uses: DevExpress/testcafe-action@latest
+      with:
+          args: "chrome:headless clioude-tester/test_cases --skip-js-errors"

@@ -1,9 +1,7 @@
-name: Pipeline
+name: Docker Image Build & Publish
 
 on:
   push:
-    branches: [ master ]
-  pull_request:
     branches: [ master ]
 
 jobs:
