@@ -39,7 +39,7 @@ jobs:
       if: steps.filter.outputs.runenv == 'true' || steps.filter.outputs.lsphub == 'true'
       run: docker build clioude-lsphub --tag ccw630/clioude-lsphub:latest
     - name: Deploy
-      run: docker-compose -f clioude-deploy/docker/docker-compose.yaml up -d
+      run: cp -r clioude-deploy/docker/* . && docker-compose up -d
     - name: Run tests
       uses: DevExpress/testcafe-action@latest
       with:
