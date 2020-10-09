@@ -1,6 +1,5 @@
 import json
 import os
-from aiofile import AIOFile
 
 import kernel
 from config import COMPILER_GROUP_GID, COMPILER_LOG_PATH, COMPILER_USER_UID
@@ -35,8 +34,8 @@ class Compiler:
 
         if result["result"] != kernel.RESULT_SUCCESS:
             if os.path.exists(compiler_out):
-                async with AIOFile(compiler_out, encoding="utf-8") as f:
-                    error = (await f.read()).strip()
+                with open(compiler_out, encoding="utf-8") as f:
+                    error = f.read().strip()
                     os.remove(compiler_out)
                     if error:
                         raise CompileError(error)
