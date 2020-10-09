@@ -8,7 +8,6 @@ import tornado.websocket
 import tornado.httpserver
 import tornado.ioloop
 
-from aiofile import AIOFile
 
 from compiler import Compiler
 from config import (COMPILER_USER_UID, IO_SOCK_DIR, RUN_GROUP_GID,
@@ -72,8 +71,8 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             src_path = os.path.join(submission_dir, compile_config["src_name"])
 
             # write source code into file
-            async with AIOFile(src_path, "w", encoding="utf-8") as f:
-                await f.write(src)
+            with open(src_path, "w", encoding="utf-8") as f:
+                f.write(src)
 
             # compile source code, return exe file path
             exe_path = await Compiler().compile(compile_config=compile_config,
@@ -81,7 +80,7 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
                                                 output_dir=submission_dir)
         else:
             exe_path = os.path.join(submission_dir, run_config["exe_name"])
-            async with AIOFile(exe_path, "w", encoding="utf-8") as f:
+            with open(exe_path, "w", encoding="utf-8") as f:
                 f.write(src)
         return exe_path
 
@@ -105,8 +104,8 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
             if input_content is not None:
                 input_path = os.path.join(submission_dir, 'input')
 
-                async with AIOFile(input_path, "w", encoding="utf-8") as f:
-                    await f.write(input_content)
+                with open(input_path, "w", encoding="utf-8") as f:
+                    f.write(input_content)
 
             kernel_client = KernelClient(run_config=language_config["run"],
                                          exe_path=exe_path,
