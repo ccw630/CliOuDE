@@ -21,8 +21,6 @@ jobs:
             - 'clioude-worker/**/*'
           lsphub:
             - 'clioude-lsphub/**/*'
-          runenv:
-            - 'clioude-runenv/**/*'
     - name: login
       run: docker login docker.io -u ${{ secrets.HUB_USER }} -p ${{ secrets.HUB_PSWD }} 
     - name: build editor
@@ -35,18 +33,13 @@ jobs:
       run: |
         docker build clioude-server --tag ${{ secrets.HUB_USER }}/clioude-server:latest
         docker push ${{ secrets.HUB_USER }}/clioude-server:latest
-    - name: build runenv
-      if: steps.filter.outputs.runenv == 'true'
-      run: |
-        docker build clioude-runenv --tag ${{ secrets.HUB_USER }}/clioude-runenv:latest
-        docker push ${{ secrets.HUB_USER }}/clioude-runenv:latest
     - name: build worker
-      if: steps.filter.outputs.runenv == 'true' || steps.filter.outputs.worker == 'true'
+      if: steps.filter.outputs.worker == 'true'
       run: |
         docker build clioude-worker --tag ${{ secrets.HUB_USER }}/clioude-worker:latest
         docker push ${{ secrets.HUB_USER }}/clioude-worker:latest
     - name: build lsphub
-      if: steps.filter.outputs.runenv == 'true' || steps.filter.outputs.lsphub == 'true'
+      if: steps.filter.outputs.lsphub == 'true'
       run: |
         docker build clioude-lsphub --tag ${{ secrets.HUB_USER }}/clioude-lsphub:latest
         docker push ${{ secrets.HUB_USER }}/clioude-lsphub:latest
