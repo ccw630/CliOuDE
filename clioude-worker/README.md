@@ -1,3 +1,3 @@
 # CliOuDE - Worker
 
-Frontend.
+A process executing service.
