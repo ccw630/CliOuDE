@@ -2,6 +2,7 @@ import json
 import os
 
 import requests
+import socket
 
 from exception import WorkerServiceError
 from utils import server_info, logger, token
@@ -9,7 +10,7 @@ from utils import server_info, logger, token
 
 class WorkerService:
     def __init__(self):
-        self.service_url = os.environ["SERVICE_URL"]
+        self.service_url = "ws://" + socket.gethostname() + ":8080"
         self.backend_url = os.environ["BACKEND_URL"]
 
     def _request(self, data):
