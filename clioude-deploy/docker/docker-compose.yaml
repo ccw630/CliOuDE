@@ -19,7 +19,6 @@ services:
             - $PWD/worker:/worker
         environment:
             - BACKEND_URL=http://server:8080/api/heartbeat
-            - SERVICE_URL=ws://worker:8080
             - TOKEN=YOUR_TOKEN_HERE
             # - worker_debug=1
 
