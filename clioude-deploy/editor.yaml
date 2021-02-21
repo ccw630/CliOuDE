@@ -22,8 +22,8 @@ spec:
           name: config
         resources:
           requests:
-            cpu: 250m
-            memory: 512Mi
+            cpu: 125m
+            memory: 256Mi
         imagePullPolicy: IfNotPresent
       restartPolicy: Always
       volumes:

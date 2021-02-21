@@ -25,8 +25,8 @@ spec:
         - containerPort: 5432
         resources:
           requests:
-            cpu: 250m
-            memory: 512Mi
+            cpu: 125m
+            memory: 256Mi
         imagePullPolicy: IfNotPresent
         # volumeMounts:
         # - mountPath: /var/lib/postgresql/data
