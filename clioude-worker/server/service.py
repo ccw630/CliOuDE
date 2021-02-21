@@ -10,7 +10,7 @@ from utils import server_info, logger, token
 
 class WorkerService:
     def __init__(self):
-        self.service_url = f"ws://{socket.gethostname()}:8080"
+        self.service_url = f"ws://{socket.gethostbyname(socket.gethostname())}:8080"
         self.backend_url = os.environ["BACKEND_URL"]
 
     def _request(self, data):
