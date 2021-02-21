@@ -24,8 +24,9 @@ spec:
         - containerPort: 8080
         resources:
           requests:
-            cpu: 250m
-            memory: 512Mi
+            cpu: 125m
+            memory: 256Mi
+        imagePullPolicy: IfNotPresent
       restartPolicy: Always
 ---
 apiVersion: v1

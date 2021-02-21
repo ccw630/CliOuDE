@@ -19,8 +19,9 @@ spec:
         - containerPort: 8999
         resources:
           requests:
-            cpu: 1000m
-            memory: 2048Mi
+            cpu: 250m
+            memory: 512Mi
+        imagePullPolicy: IfNotPresent
         volumeMounts:
         - mountPath: /tmp
           name: lsphub-tmpfs0

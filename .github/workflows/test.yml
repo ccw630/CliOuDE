@@ -9,6 +9,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+    - name: Start minikube
+      uses: medyagh/setup-minikube@master
+    - name: Try the cluster
+      run: kubectl get pods -A
+    - name: Switch docker
+      run: eval $(minikube -p minikube docker-env)
     - uses: dorny/paths-filter@v2.2.0
       id: filter
       with:
@@ -23,18 +29,18 @@ jobs:
             - 'clioude-lsphub/**/*'
     - name: build editor
       if: steps.filter.outputs.editor == 'true'
-      run: docker build clioude-editor --tag ccw630/clioude-editor
+      run: docker build clioude-editor --tag ccw630/clioude-editor:latest
     - name: build server
       if: steps.filter.outputs.server == 'true'
-      run: docker build clioude-server --tag ccw630/clioude-server
+      run: docker build clioude-server --tag ccw630/clioude-server:latest
     - name: build worker
       if: steps.filter.outputs.worker == 'true'
-      run: docker build clioude-worker --tag ccw630/clioude-worker
+      run: docker build clioude-worker --tag ccw630/clioude-worker:latest
     - name: build lsphub
       if: steps.filter.outputs.lsphub == 'true'
       run: docker build clioude-lsphub --tag ccw630/clioude-lsphub:latest
     - name: Deploy
-      run: cp -r clioude-deploy/docker/* . && docker-compose up -d
+      run: kubectl apply -f clioude-deploy/ && export CLIOUDE_URL=$(minikube service editor --url)
     - name: Run tests
       uses: DevExpress/testcafe-action@latest
       with:
