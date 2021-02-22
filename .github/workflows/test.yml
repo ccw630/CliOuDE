@@ -12,11 +12,7 @@ jobs:
     - name: Start minikube
       uses: medyagh/setup-minikube@master
     - name: Switch docker
-      run: |
-        minikube -p minikube docker-env | head -4 | awk '{gsub(/"/,""); print $2}' | while read -r line; do
-          echo $line
-          echo $line >> $GITHUB_ENV
-        done
+      run: minikube -p minikube docker-env | head -4 | awk '{gsub(/"/,""); print $2}' >> $GITHUB_ENV
     - uses: dorny/paths-filter@v2.2.0
       id: filter
       with:
