@@ -9,9 +9,7 @@ RUN pip3 install --no-cache-dir psutil tornado requests && \
     mkdir -p /code && \
     useradd -u 12001 compiler && useradd -u 12002 code
 
-HEALTHCHECK --interval=5s --retries=3 CMD python3 /code/service.py
 ADD server /code
 WORKDIR /code
 RUN gcc -shared -fPIC -o unbuffer.so unbuffer.c
-EXPOSE 8080
 ENTRYPOINT /code/entrypoint.sh
