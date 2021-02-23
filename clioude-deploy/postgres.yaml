@@ -25,17 +25,18 @@ spec:
         - containerPort: 5432
         resources:
           requests:
-            cpu: 250m
-            memory: 512Mi
-        volumeMounts:
-        - mountPath: /var/lib/postgresql/data
-          name: volume-pg
-          subPath: postgres-data
+            cpu: 125m
+            memory: 256Mi
+        imagePullPolicy: IfNotPresent
+        # volumeMounts:
+        # - mountPath: /var/lib/postgresql/data
+        #   name: volume-pg
+        #   subPath: postgres-data
       restartPolicy: Always
-      volumes:
-        - name: volume-pg
-          persistentVolumeClaim:
-            claimName: pg
+      # volumes:
+      #   - name: volume-pg
+      #     persistentVolumeClaim:
+      #       claimName: pg
 ---
 apiVersion: v1
 kind: Service
