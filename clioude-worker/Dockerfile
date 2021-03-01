@@ -1,6 +1,6 @@
 FROM ccw630/clioude-runenv
 
-COPY ../clioude-kernel /tmp/kernel
+COPY kernel /tmp/kernel
 
 RUN pip3 install --no-cache-dir psutil tornado requests && \
     cd /tmp/kernel && mkdir build && cd build && cmake .. && make && make install && \
