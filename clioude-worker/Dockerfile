@@ -1,6 +1,6 @@
 FROM ccw630/clioude-runenv
 
-COPY kernel /tmp/kernel
+COPY ../clioude-kernel /tmp/kernel
 
 RUN pip3 install --no-cache-dir psutil tornado requests && \
     cd /tmp/kernel && mkdir build && cd build && cmake .. && make && make install && \
@@ -9,7 +9,7 @@ RUN pip3 install --no-cache-dir psutil tornado requests && \
     mkdir -p /code && \
     useradd -u 12001 compiler && useradd -u 12002 code
 
-ADD server /code
+ADD worker /code
 WORKDIR /code
 RUN gcc -shared -fPIC -o unbuffer.so unbuffer.c
 ENTRYPOINT /code/entrypoint.sh

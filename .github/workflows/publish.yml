@@ -19,6 +19,8 @@ jobs:
             - 'clioude-server/**/*'
           worker:
             - 'clioude-worker/**/*'
+          kernel:
+            - 'clioude-kernel/**/*'
           lsphub:
             - 'clioude-lsphub/**/*'
     - name: login
@@ -34,7 +36,7 @@ jobs:
         docker build clioude-server --tag ${{ secrets.HUB_USER }}/clioude-server:latest
         docker push ${{ secrets.HUB_USER }}/clioude-server:latest
     - name: build worker
-      if: steps.filter.outputs.worker == 'true'
+      if: steps.filter.outputs.worker == 'true' || steps.filter.outputs.kernel == 'true'
       run: |
         docker build clioude-worker --tag ${{ secrets.HUB_USER }}/clioude-worker:latest
         docker push ${{ secrets.HUB_USER }}/clioude-worker:latest
