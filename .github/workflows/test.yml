@@ -23,6 +23,8 @@ jobs:
             - 'clioude-server/**/*'
           worker:
             - 'clioude-worker/**/*'
+          kernel:
+            - 'clioude-kernel/**/*'
           lsphub:
             - 'clioude-lsphub/**/*'
     - name: build editor
@@ -31,8 +33,11 @@ jobs:
     - name: build server
       if: steps.filter.outputs.server == 'true'
       run: docker build clioude-server --tag ccw630/clioude-server:latest
+    - name: build kernel
+      if: steps.filter.outputs.kernel == 'true'
+      run: docker build clioude-kernel --tag ccw630/clioude-kernel:latest
     - name: build worker
-      if: steps.filter.outputs.worker == 'true'
+      if: steps.filter.outputs.worker == 'true' || steps.filter.outputs.kernel == 'true'
       run: docker build clioude-worker --tag ccw630/clioude-worker:latest
     - name: build lsphub
       if: steps.filter.outputs.lsphub == 'true'
