@@ -1,0 +1,13 @@
+[package]
+name = "clioude-runner"
+version = "0.1.0"
+authors = ["ccw630 <ccw630@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tokio = { version = "1.6.1", features = ["full"] }
+tokio-tungstenite = "*"
+futures = "0.3"
+url = { version = "2" }
