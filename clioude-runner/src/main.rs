@@ -1,88 +1,172 @@
 use std::env;
 
-use url::Url;
-use futures::{future, pin_mut, StreamExt, SinkExt};
-use tokio_tungstenite::{connect_async, tungstenite::protocol::Message, tungstenite::Error};
-use tokio::io::{AsyncWriteExt, AsyncReadExt};
-use tokio::process::Command;
-use std::process::Stdio;
+use futures::{future, pin_mut, SinkExt, StreamExt};
 use std::cell::RefCell;
-use std::str;
-
+use std::fs;
+use std::fs::File;
+use std::io::prelude::*;
+use std::process::{exit, Stdio};
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::process::Command;
+use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
+use url::Url;
 
 #[tokio::main]
 async fn main() {
-    let connect_addr =
-        env::args().nth(1).unwrap_or_else(|| panic!("this program requires at least one argument"));
+    let connect_addr = env::args()
+        .nth(1)
+        .unwrap_or_else(|| panic!("this program requires at least one argument"));
 
     let url = Url::parse(&connect_addr).unwrap();
 
+    let (ws_stream, _) = connect_async(&url).await.expect("Failed to connect");
+    println!("WebSocket handshake has been successfully completed");
+    let (mut ws_writer, mut ws_reader) = ws_stream.split();
+
+    let mut language: Option<String> = None;
+    let mut run_id: String = String::new();
+    let mut pid: Option<u32> = None;
+    let mut cmd: Command;
     loop {
-        let (ws_stream, _) = connect_async(&url).await.expect("Failed to connect");
-        println!("WebSocket handshake has been successfully completed");
-        let (ws_writer, ws_reader) = ws_stream.split();
-        let mut cmd = Command::new("python3");
-        cmd.arg("/Users/ccw/2.py");
-        execute(cmd, ws_writer, ws_reader).await;
-        break;
+        let message = ws_reader.next().await.unwrap();
+        let mut data = message.unwrap().into_data();
+        match data.pop() {
+            Some(0xc0u8) => {
+                run_id = String::from_utf8_lossy(&data[..16]).into_owned();
+                language = Some(String::from_utf8_lossy(&data[16..]).into_owned());
+            }
+            Some(0xc1u8) => {
+                let single_run = get_raw_run(&language);
+                let path = format!("run/{}", run_id);
+                fs::create_dir_all(&path).expect("Failed to create directory");
+                let mut file = File::create(format!("{}/{}", &path, single_run.file))
+                    .expect("Failed to create file");
+                file.write_all(&data).expect("Failed to write file");
+
+                if let Some(mut compile_command) = single_run.compile_command {
+                    let mut process = compile_command
+                        .current_dir(&path)
+                        .stdout(Stdio::piped())
+                        .stderr(Stdio::piped())
+                        .spawn()
+                        .expect("Failed to create compile process");
+                    pid = process.id();
+                    ws_writer
+                        .send(Message::binary(vec![RunStatus::Compiling as u8, 0xe7]))
+                        .await
+                        .unwrap();
+                    let output = process
+                        .wait_with_output()
+                        .await
+                        .expect("Compile process error");
+                    if !output.status.success() {
+                        ws_writer
+                            .send(Message::binary([output.stdout, vec![0xe1]].concat()))
+                            .await
+                            .unwrap();
+                        ws_writer
+                            .send(Message::binary([output.stderr, vec![0xe2]].concat()))
+                            .await
+                            .unwrap();
+                        ws_writer
+                            .send(Message::binary(vec![RunStatus::CompileError as u8, 0xe8]))
+                            .await
+                            .unwrap();
+                        exit(0);
+                    }
+                }
+
+                let mut run_command = single_run.run_command;
+                run_command.current_dir(&path);
+                cmd = run_command;
+                break;
+            }
+            Some(0xdeu8) => {
+                // process.kill();
+            }
+            None | Some(_) => (),
+        }
     }
-    
-}
 
-async fn execute(mut cmd: tokio::process::Command, mut ws_writer: impl futures::sink::Sink<Message> + std::marker::Unpin, ws_reader: impl futures::Stream<Item = std::result::Result<Message, Error>>) {
-    let mut process = cmd.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().expect("failed to spawn command");
+    let mut process = cmd
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("failed to spawn command");
 
-    let pid = process.id().unwrap();
-    let stdin = process.stdin.take().expect("child did not have a handle to stdin");
-    let stdout = process.stdout.take().expect("child did not have a handle to stdout");
-    let stderr = process.stderr.take().expect("child did not have a handle to stderr");
+    pid = process.id();
+    let stdin = process
+        .stdin
+        .take()
+        .expect("child did not have a handle to stdin");
+    let stdout = process
+        .stdout
+        .take()
+        .expect("child did not have a handle to stdout");
+    let stderr = process
+        .stderr
+        .take()
+        .expect("child did not have a handle to stderr");
+    ws_writer
+        .send(Message::binary(vec![RunStatus::Running as u8, 0xe7]))
+        .await
+        .unwrap();
 
+    let (ws_tx, ws_rx) = futures::channel::mpsc::unbounded::<Vec<u8>>();
+    let stdout_tx = ws_tx.clone();
+    let stderr_tx = ws_tx.clone();
 
-
-    match ws_writer.send(Message::from(format!("PID: {:?}", pid))).await {
-        Err(_) => panic!("failed to send message"),
-        Ok(_) => ()
-    };
-
-    // Ensure the child process is spawned in the runtime so it can
-    // make progress on its own while we await for any output.
-    tokio::spawn(async move {
-        let status = process.wait().await
-            .expect("child process encountered an error");
-
-        println!("child status was: {}", status);
-    });
-
-    // Handle stdout & stderr
-    let (stdout_tx, ws_rx) = futures::channel::mpsc::unbounded::<Message>();
-    let stderr_tx = stdout_tx.clone();
     tokio::spawn(pipe(stdout, stdout_tx, 0xe1));
     tokio::spawn(pipe(stderr, stderr_tx, 0xe2));
-    let stdouterr_to_ws = ws_rx.map(Ok).forward(ws_writer);
+    tokio::spawn(async move {
+        let status = process
+            .wait()
+            .await
+            .expect("child process encountered an error");
 
-    // Handle stdin
+        ws_tx
+            .unbounded_send(vec![status.code().unwrap() as u8, 0xe8])
+            .unwrap();
+    });
+
+    let wsout_cell = RefCell::new(ws_writer);
+    let out_to_ws = ws_rx.for_each(|data| async {
+        let mut wsout = wsout_cell.borrow_mut();
+        let last = data.last().unwrap().clone();
+        wsout
+            .send(Message::binary(data))
+            .await
+            .expect("send message failed");
+        wsout.flush().await.unwrap();
+        if last == 0xe8u8 {
+            wsout.close().await.unwrap();
+        }
+    });
+
     let stdin_cell = RefCell::new(stdin);
-    let ws_to_stdin = {
-        ws_reader.for_each(|message| async {
-            let mut data = message.unwrap().into_data();
-            match data.pop() {
-                Some(0xdeu8) => {
-                    // kill running process & throw
-                },
-                None | Some(_) => (),
-            };
-            println!("WS Recieved {:?}", str::from_utf8(&data).unwrap());
-            let mut stdin = stdin_cell.borrow_mut();
-            stdin.write_all(&data).await.expect("write failed");
-            stdin.flush().await.unwrap();
-        })
-    };
+    let ws_to_stdin = ws_reader.for_each(|message| async {
+        let mut data = message.unwrap().into_data();
+        match data.pop() {
+            Some(0xdeu8) => {
+                // kill running process & throw
+            }
+            None | Some(_) => (),
+        };
+        let mut stdin = stdin_cell.borrow_mut();
+        stdin.write_all(&data).await.expect("write failed");
+        stdin.flush().await.unwrap();
+    });
 
-    pin_mut!(stdouterr_to_ws, ws_to_stdin);
-    future::select(stdouterr_to_ws, ws_to_stdin).await;
+    pin_mut!(out_to_ws, ws_to_stdin);
+    future::select(out_to_ws, ws_to_stdin).await;
 }
 
-async fn pipe(mut reader: impl tokio::io::AsyncRead + std::marker::Unpin, tx: futures::channel::mpsc::UnboundedSender<Message>, end: u8) {
+async fn pipe(
+    mut reader: impl tokio::io::AsyncRead + std::marker::Unpin,
+    tx: futures::channel::mpsc::UnboundedSender<Vec<u8>>,
+    end: u8,
+) {
     loop {
         let mut buf = vec![0; 1024];
         let n = match reader.read(&mut buf).await {
@@ -90,8 +174,57 @@ async fn pipe(mut reader: impl tokio::io::AsyncRead + std::marker::Unpin, tx: fu
             Ok(n) => n,
         };
         buf.truncate(n);
-        println!("OUTPUT Recieved {:?}", str::from_utf8(&buf).unwrap());
         buf.push(end);
-        tx.unbounded_send(Message::binary(buf)).unwrap();
+        tx.unbounded_send(buf).unwrap();
+    }
+}
+
+enum RunStatus {
+    Running = 0,
+    Compiling,
+    CompileError,
+    Ok,
+    RuntimeError,
+    TimeLimitExceeded,
+}
+
+struct SingleRun {
+    file: String,
+    run_command: Command,
+    compile_command: Option<Command>,
+}
+
+fn get_raw_run(lang: &Option<String>) -> SingleRun {
+    match lang.as_deref() {
+        Some("C++") => {
+            let file = String::from("main.cpp");
+            let mut compile_command = Command::new("g++");
+            compile_command.arg("-O2");
+            compile_command.arg("-w");
+            compile_command.arg("-fmax-errors=3");
+            compile_command.arg("-std=c++17");
+            compile_command.arg(&file);
+            compile_command.arg("-lm");
+            compile_command.arg("-o");
+            compile_command.arg("./main");
+            let run_command = Command::new("./main");
+            SingleRun {
+                file,
+                run_command,
+                compile_command: Some(compile_command),
+            }
+        }
+        Some("Python") => {
+            let file = String::from("main.py");
+            let mut run_command = Command::new("python3");
+            run_command.arg(&file);
+            SingleRun {
+                file,
+                run_command,
+                compile_command: None,
+            }
+        }
+        Some(_) => panic!("No such language"),
+        None => panic!("No language received"),
     }
 }

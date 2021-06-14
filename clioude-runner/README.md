@@ -8,13 +8,15 @@
    * Memory Free
    * Available Language & Executables(GCC/Python/...)
 3. Prepare on Server responds with
-   1. Language
+   1. RunID(16 bytes) + Language
    2. Code Content
-4. Run as subprocess with interactive stdio
-5. Send subprocess info after exit
-   * Time Spent
-   * Memory Usage
-   * Exit Code
+4. Report running/compiling
+5. Run as subprocess with interactive stdio
+6. Send subprocess info after exit
+   * Result(Ok/CE/RE/TLE, 1 byte as u8)
+   * Exit Code(2 bytes as u8)
+   * Time Spent(8 bytes as u64)
+   * Memory Usage(in KB, 8 bytes as u64)
 
 ## Protocol
 
@@ -24,10 +26,11 @@ Exactly one flag at the end of each message.
 
 ### Flags
 
-* `\xc0`: language
+* `\xc0`: run id + language
 * `\xc1`: code content
 * `\xde`: kill
 * `\xe0`: stdin append
 * `\xe1`: stdout append
 * `\xe2`: stderr append
+* `\xe7`: status info
 * `\xe8`: exit info
