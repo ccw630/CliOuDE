@@ -12,9 +12,11 @@
    2. Code Content
 4. Report running/compiling
 5. Run as subprocess with interactive stdio
-6. Send subprocess info after exit
-   * Result(Ok/CE/RE/TLE, 1 byte as u8)
-   * Exit Code(2 bytes as u8)
+6. Send status info
+   * Ok/CE/RE/TLE
+7. Send subprocess info after exit
+
+   * Exit Code(1 bytes as u8)
    * Time Spent(8 bytes as u64)
    * Memory Usage(in KB, 8 bytes as u64)
 

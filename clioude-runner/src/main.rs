@@ -6,6 +6,7 @@ use std::fs;
 use std::fs::File;
 use std::io::prelude::*;
 use std::process::{exit, Stdio};
+use sysinfo::{ProcessExt, RefreshKind, Signal, System, SystemExt};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::process::Command;
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
@@ -18,18 +19,26 @@ async fn main() {
         .unwrap_or_else(|| panic!("this program requires at least one argument"));
 
     let url = Url::parse(&connect_addr).unwrap();
+    // loop {
+    run(&url).await;
+    // }
 
-    let (ws_stream, _) = connect_async(&url).await.expect("Failed to connect");
+}
+
+async fn run(url: &Url) {
+
+    let (ws_stream, _) = connect_async(url).await.expect("Failed to connect");
     println!("WebSocket handshake has been successfully completed");
     let (mut ws_writer, mut ws_reader) = ws_stream.split();
 
     let mut language: Option<String> = None;
     let mut run_id: String = String::new();
-    let mut pid: Option<u32> = None;
+    let mut pid: Option<u32>;
     let mut cmd: Command;
     loop {
         let message = ws_reader.next().await.unwrap();
         let mut data = message.unwrap().into_data();
+        println!("Received message {:?}", &data);
         match data.pop() {
             Some(0xc0u8) => {
                 run_id = String::from_utf8_lossy(&data[..16]).into_owned();
@@ -126,7 +135,13 @@ async fn main() {
             .expect("child process encountered an error");
 
         ws_tx
-            .unbounded_send(vec![status.code().unwrap() as u8, 0xe8])
+            .unbounded_send(vec![
+                match status.code() {
+                    Some(code) => code,
+                    None => 9,
+                } as u8,
+                0xe8,
+            ])
             .unwrap();
     });
 
@@ -149,13 +164,19 @@ async fn main() {
         let mut data = message.unwrap().into_data();
         match data.pop() {
             Some(0xdeu8) => {
-                // kill running process & throw
+                let mut s = System::new();
+                s.refresh_specifics(RefreshKind::new().with_processes());
+                if let Some(process) = s.get_process(pid.unwrap() as i32) {
+                    process.kill(Signal::Kill);
+                }
+            }
+            Some(0xe0u8) => {
+                let mut stdin = stdin_cell.borrow_mut();
+                stdin.write_all(&data).await.expect("write failed");
+                stdin.flush().await.unwrap();
             }
             None | Some(_) => (),
         };
-        let mut stdin = stdin_cell.borrow_mut();
-        stdin.write_all(&data).await.expect("write failed");
-        stdin.flush().await.unwrap();
     });
 
     pin_mut!(out_to_ws, ws_to_stdin);
@@ -186,6 +207,7 @@ enum RunStatus {
     Ok,
     RuntimeError,
     TimeLimitExceeded,
+    Killed,
 }
 
 struct SingleRun {
@@ -227,4 +249,62 @@ fn get_raw_run(lang: &Option<String>) -> SingleRun {
         Some(_) => panic!("No such language"),
         None => panic!("No language received"),
     }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn integration_test_ok() {
+        let (listener, url) = before_test().await;
+        tokio::join!(test_server_ok(listener), run(&url));
+    }
+
+    #[tokio::test]
+    async fn integration_test_kill() {
+        let (listener, url) = before_test().await;
+        tokio::join!(test_server_kill(listener), run(&url));
+    }
+
+    async fn before_test() -> (tokio::net::TcpListener, url::Url) {
+        for port in 1025u16..65535u16 {
+            let addr = format!("ws://127.0.0.1:{}", port);
+            match tokio::net::TcpListener::bind(&addr[5..]).await {
+                Ok(l) => return (l, Url::parse(&addr).unwrap()),
+                _ => ()
+            }
+       }
+       panic!("No port available, failed to bind")
+    }
+
+    async fn test_server_ok(listener: tokio::net::TcpListener) {
+        let (stream, _) = listener.accept().await.expect("Failed to accept");
+        //let addr = stream.peer_addr().expect("connected streams should have a peer address");
+        let ws_stream = tokio_tungstenite::accept_async(stream).await.expect("Error during the websocket handshake occurred");
+        let (mut write, mut read) = ws_stream.split();
+        write.send(Message::binary(b"0123456789abcdefC++\xc0".as_ref())).await.expect("Send fail");
+        write.send(Message::binary(b"#include<iostream>\nusing namespace std;int main(){int n;cin>>n;cout<<n+1<<endl;}\n\xc1".as_ref())).await.expect("Send fail");
+        assert_eq!(Message::binary(vec![0x01, 0xe7]), read.next().await.unwrap().unwrap());
+        assert_eq!(Message::binary(vec![0x00, 0xe7]), read.next().await.unwrap().unwrap());
+        write.send(Message::binary(b"1\n\xe0".as_ref())).await.expect("Send fail");
+        assert_eq!(Message::binary(b"2\n\xe1".as_ref()), read.next().await.unwrap().unwrap());
+        write.close().await.expect("Close fail");
+    }
+
+    async fn test_server_kill(listener: tokio::net::TcpListener) {
+        let (stream, _) = listener.accept().await.expect("Failed to accept");
+        //let addr = stream.peer_addr().expect("connected streams should have a peer address");
+        let ws_stream = tokio_tungstenite::accept_async(stream).await.expect("Error during the websocket handshake occurred");
+        let (mut write, mut read) = ws_stream.split();
+        write.send(Message::binary(b"0123456789abcdefC++\xc0".as_ref())).await.expect("Send fail");
+        write.send(Message::binary(b"#include<iostream>\nusing namespace std;int main(){int n;cin>>n;cout<<n+1<<endl;}\n\xc1".as_ref())).await.expect("Send fail");
+        assert_eq!(Message::binary(vec![0x01, 0xe7]), read.next().await.unwrap().unwrap());
+        assert_eq!(Message::binary(vec![0x00, 0xe7]), read.next().await.unwrap().unwrap());
+        write.send(Message::binary(vec![0xde])).await.expect("Send fail");
+        assert_eq!(Message::binary(vec![0x09, 0xe8]), read.next().await.unwrap().unwrap());
+        write.close().await.expect("Close fail");
+    }
+
 }

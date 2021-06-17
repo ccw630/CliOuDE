@@ -11,3 +11,4 @@ tokio = { version = "1.6.1", features = ["full"] }
 tokio-tungstenite = "*"
 futures = "0.3"
 url = { version = "2" }
+sysinfo = "0.18.2"
