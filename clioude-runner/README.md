@@ -3,23 +3,19 @@
 ## Process Flow
 
 1. Connect Server through WebSocket
-2. Loop send runner info includes
-   * CPU Free
-   * Memory Free
-   * Available Language & Executables(GCC/Python/...)
+2. Send runner info includes
+   * System info(CPU/Memory/OS Version/...)
+   * Available language & executables(GCC/Python/...)
 3. Prepare on Server responds with
    1. RunID(16 bytes) + Language
-   2. Code Content
-4. Report running/compiling
+   2. Code content, write to directory `run/<RunID>/`
+   3. If needed, compile the code in subprocess
+4. Report compiling/running
 5. Run as subprocess with interactive stdio
 6. Send status info
-   * Ok/CE/RE/TLE
-7. Send subprocess info after exit
-
-   * Exit Code(1 bytes as u8)
-   * Time Spent(8 bytes as u64)
-   * Memory Usage(in KB, 8 bytes as u64)
-
+   * Memory used increasely
+   * Ok/CE/RE at done
+   * Exit code at exit
 ## Protocol
 
 Bytes messages based on WebSocket.
@@ -30,9 +26,12 @@ Exactly one flag at the end of each message.
 
 * `\xc0`: run id + language
 * `\xc1`: code content
-* `\xde`: kill
 * `\xe0`: stdin append
 * `\xe1`: stdout append
 * `\xe2`: stderr append
 * `\xe7`: status info
 * `\xe8`: exit info
+
+## Tips
+
+* Preferred run in containers
