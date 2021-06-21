@@ -35,3 +35,4 @@ Exactly one flag at the end of each message.
 ## Tips
 
 * Preferred run in containers
+* Subprocess killed on socket close
