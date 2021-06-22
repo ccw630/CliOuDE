@@ -13,7 +13,7 @@
 4. Report compiling/running
 5. Run as subprocess with interactive stdio
 6. Send status info
-   * Memory used increasely
+   * Time/CPU/Memory usage(f64 in s + f32 in percent + u64 in KB)
    * Ok/CE/RE at done
    * Exit code at exit
 ## Protocol
@@ -29,6 +29,7 @@ Exactly one flag at the end of each message.
 * `\xe0`: stdin append
 * `\xe1`: stdout append
 * `\xe2`: stderr append
+* `\xe6`: cpu/memory usage
 * `\xe7`: status info
 * `\xe8`: exit info
 

@@ -1,15 +1,15 @@
 use std::env;
 
 use futures::{future, pin_mut, SinkExt, StreamExt};
-use std::cell::RefCell;
 use std::fs;
 use std::fs::File;
 use std::io::prelude::*;
 use std::process::Stdio;
-use sysinfo::{ProcessExt, RefreshKind, Signal, System, SystemExt};
+use sysinfo::{ProcessExt, Signal, System, SystemExt};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::process::Command;
 use tokio::time::{sleep, Duration};
+use std::time::SystemTime;
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message, tungstenite::Error};
 use url::Url;
 
@@ -50,7 +50,10 @@ impl Run {
         let mut process: Option<tokio::process::Child> = None;
         let mut cmd: Command;
         loop {
-            let message = ws_reader.next().await.unwrap();
+            let message = match ws_reader.next().await {
+                Some(message) => message,
+                None => return Ok(ExitStatus::StartInterrupted),
+            };
             let mut data = message?.into_data();
             match data.pop() {
                 Some(0xc0u8) => {
@@ -116,7 +119,7 @@ impl Run {
             .stderr(Stdio::piped())
             .spawn()?;
         self.pid = process.id();
-        let stdin = process
+        let mut stdin = process
             .stdin
             .take()
             .expect("child did not have a handle to stdin");
@@ -131,11 +134,36 @@ impl Run {
         ws_writer
             .send(Message::binary(vec![RunStatus::Running as u8, 0xe7]))
             .await?;
-        let (ws_tx, ws_rx) = futures::channel::mpsc::unbounded::<Vec<u8>>();
+        let (ws_tx, mut ws_rx) = futures::channel::mpsc::unbounded::<Vec<u8>>();
         let stdout_tx = ws_tx.clone();
         let stderr_tx = ws_tx.clone();
+        let loop_tx = ws_tx.clone();
         tokio::spawn(pipe(stdout, stdout_tx, 0xe1));
         tokio::spawn(pipe(stderr, stderr_tx, 0xe2));
+        let pid = self.pid.unwrap() as i32;
+        tokio::spawn(async move {
+            let mut s = System::new();
+            let now = SystemTime::now();
+            while s.refresh_process(pid) {
+                if let Some(process) = s.get_process(pid) {
+                    loop_tx
+                        .unbounded_send(
+                            [
+                                now.elapsed().unwrap().as_secs_f64().to_bits().to_be_bytes().to_vec(),
+                                process.cpu_usage().to_bits().to_be_bytes().to_vec(),
+                                process.memory().to_be_bytes().to_vec(),
+                                vec![0xe6],
+                            ]
+                            .concat(),
+                        )
+                        .unwrap();
+                    sleep(Duration::from_millis(200)).await;
+                } else {
+                    break;
+                }
+                break;
+            }
+        });
         tokio::spawn(async move {
             let status = process
                 .wait()
@@ -162,41 +190,44 @@ impl Run {
                 ])
                 .unwrap();
         });
-        let wsout_cell = RefCell::new(ws_writer);
-        let out_to_ws = ws_rx.for_each(|data| async {
-            let mut wsout = wsout_cell.borrow_mut();
-            let last = data.last().unwrap().clone();
-            wsout
-                .send(Message::binary(data))
-                .await
-                .expect("send message failed");
-            wsout.flush().await.unwrap();
-            if last == 0xe8u8 {
-                wsout.close().await.unwrap();
+        tokio::spawn(async move {
+            while let Some(data) = ws_rx.next().await {
+                let last = data.last().unwrap().clone();
+                match ws_writer.send(Message::binary(data)).await {
+                    Ok(_) => (),
+                    Err(err) => println!("FATAL: {:?} at send message", err),
+                };
+                if last == 0xe8u8 {
+                    ws_writer.close().await.unwrap();
+                }
             }
         });
-        let stdin_cell = RefCell::new(stdin);
-        let ws_to_stdin = ws_reader.for_each(|message| async {
-            let mut data = message.unwrap().into_data();
-            match data.pop() {
-                Some(0xe0u8) => {
-                    let mut stdin = stdin_cell.borrow_mut();
-                    stdin.write_all(&data).await.expect("write failed");
-                    stdin.flush().await.unwrap();
+        while let Some(message) = ws_reader.next().await {
+            match message {
+                Ok(message) => {
+                    let mut data = message.into_data();
+                    match data.pop() {
+                        Some(0xe0u8) => {
+                            stdin.write_all(&data).await.expect("write to stdin failed");
+                            stdin.flush().await.unwrap();
+                        }
+                        None | Some(_) => (),
+                    };
                 }
-                None | Some(_) => (),
-            };
-        });
-        pin_mut!(out_to_ws, ws_to_stdin);
-        future::select(out_to_ws, ws_to_stdin).await;
-
+                Err(err) => {
+                    println!("FATAL: {:?} at read message", err);
+                    break;
+                }
+            }
+        }
         Ok(self.cleanup())
     }
 
     fn cleanup(&self) -> ExitStatus {
         let mut s = System::new();
-        s.refresh_specifics(RefreshKind::new().with_processes());
-        if let Some(process) = s.get_process(self.pid.unwrap() as i32) {
+        let pid = self.pid.unwrap() as i32;
+        s.refresh_process(pid);
+        if let Some(process) = s.get_process(pid) {
             process.kill(Signal::Kill);
             return ExitStatus::Killed;
         }
@@ -222,6 +253,7 @@ async fn pipe(
 }
 
 enum ExitStatus {
+    StartInterrupted,
     CompileError,
     CompileInterrupted,
     Killed,
@@ -317,6 +349,15 @@ mod tests {
         assert!(matches!(_b.unwrap(), ExitStatus::CompileError));
     }
 
+    #[tokio::test]
+    async fn integration_test_disconnect_on_start() {
+        let (listener, url) = before_test().await;
+        let mut run = Run::new();
+        let (_a, _b) = future::join(test_server_disconnect_on_start(listener), run.run(&url)).await;
+        _a.unwrap();
+        assert!(matches!(_b.unwrap(), ExitStatus::StartInterrupted));
+    }
+
     async fn before_test() -> (tokio::net::TcpListener, url::Url) {
         for port in 1025u16..65535u16 {
             let addr = format!("ws://127.0.0.1:{}", port);
@@ -345,12 +386,7 @@ mod tests {
             read.next().await.unwrap().unwrap()
         );
         write.send(Message::binary(b"1\n\xe0".as_ref())).await?;
-        let following = [
-            read.next().await.unwrap().unwrap(),
-            read.next().await.unwrap().unwrap(),
-            read.next().await.unwrap().unwrap(),
-            read.next().await.unwrap().unwrap(),
-        ];
+        let following = read.map(|x| x.unwrap()).collect::<Vec<_>>().await;
         assert!(following.contains(&Message::binary(b"2\n\xe1".as_ref())));
         assert!(following.contains(&Message::binary(b"3\n\xe2".as_ref())));
         assert!(following.contains(&Message::binary(vec![0x03, 0xe7])));
@@ -416,6 +452,20 @@ mod tests {
             Message::binary(vec![0x01, 0xe7]),
             read.next().await.unwrap().unwrap()
         );
+        Ok(())
+    }
+
+    async fn test_server_disconnect_on_start(
+        listener: tokio::net::TcpListener,
+    ) -> Result<(), Error> {
+        let (stream, _) = listener.accept().await?;
+        let ws_stream = tokio_tungstenite::accept_async(stream).await?;
+        let (mut write, _) = ws_stream.split();
+        write
+            .send(Message::binary(b"0123456789abcdebC++\xc0".as_ref()))
+            .await?;
+        sleep(Duration::from_millis(1000)).await;
+        write.close().await?;
         Ok(())
     }
 }
