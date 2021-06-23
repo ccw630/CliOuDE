@@ -1,17 +1,17 @@
 use std::env;
-
-use futures::{future, pin_mut, SinkExt, StreamExt};
+use std::time::SystemTime;
 use std::fs;
 use std::fs::File;
 use std::io::prelude::*;
 use std::process::Stdio;
-use sysinfo::{ProcessExt, Signal, System, SystemExt};
+use url::Url;
+use futures::{future, pin_mut, SinkExt, StreamExt};
+use sysinfo::{ProcessExt, ProcessorExt, Signal, System, SystemExt};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::process::Command;
 use tokio::time::{sleep, Duration};
-use std::time::SystemTime;
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message, tungstenite::Error};
-use url::Url;
+use serde::{Deserialize, Serialize};
 
 #[tokio::main]
 async fn main() {
@@ -49,6 +49,13 @@ impl Run {
         let mut language: Option<String> = None;
         let mut process: Option<tokio::process::Child> = None;
         let mut cmd: Command;
+        let mut sys = System::new();
+        sys.refresh_memory();
+        let env_info = EnvInfo {
+            cpu_freq: sys.get_global_processor_info().get_frequency(),
+            total_memory: sys.get_total_memory()
+        };
+        ws_writer.send(Message::binary(serde_json::to_string(&env_info).unwrap())).await?;
         loop {
             let message = match ws_reader.next().await {
                 Some(message) => message,
@@ -71,14 +78,12 @@ impl Run {
                             .current_dir(&path)
                             .stdout(Stdio::piped())
                             .stderr(Stdio::piped())
-                            .spawn()
-                            .expect("Failed to create compile process");
+                            .spawn()?;
                         self.pid = p.id();
                         process = Some(p);
                         ws_writer
                             .send(Message::binary(vec![RunStatus::Compiling as u8, 0xe7]))
-                            .await
-                            .unwrap();
+                            .await?;
                     }
                     let mut run_command = single_run.run_command;
                     run_command.current_dir(&path);
@@ -142,10 +147,9 @@ impl Run {
         tokio::spawn(pipe(stderr, stderr_tx, 0xe2));
         let pid = self.pid.unwrap() as i32;
         tokio::spawn(async move {
-            let mut s = System::new();
             let now = SystemTime::now();
-            while s.refresh_process(pid) {
-                if let Some(process) = s.get_process(pid) {
+            while sys.refresh_process(pid) {
+                if let Some(process) = sys.get_process(pid) {
                     loop_tx
                         .unbounded_send(
                             [
@@ -208,8 +212,8 @@ impl Run {
                     let mut data = message.into_data();
                     match data.pop() {
                         Some(0xe0u8) => {
-                            stdin.write_all(&data).await.expect("write to stdin failed");
-                            stdin.flush().await.unwrap();
+                            stdin.write_all(&data).await?;
+                            stdin.flush().await?
                         }
                         None | Some(_) => (),
                     };
@@ -266,6 +270,12 @@ enum RunStatus {
     CompileError,
     Ok,
     RuntimeError,
+}
+
+#[derive(Serialize, Deserialize)]
+struct EnvInfo {
+    cpu_freq: u64,
+    total_memory: u64
 }
 
 struct SingleRun {
@@ -373,6 +383,7 @@ mod tests {
         let (stream, _) = listener.accept().await?;
         let ws_stream = tokio_tungstenite::accept_async(stream).await?;
         let (mut write, mut read) = ws_stream.split();
+        read.next().await;
         write
             .send(Message::binary(b"0123456789abcdefC++\xc0".as_ref()))
             .await?;
@@ -399,6 +410,7 @@ mod tests {
         let (stream, _) = listener.accept().await?;
         let ws_stream = tokio_tungstenite::accept_async(stream).await?;
         let (mut write, mut read) = ws_stream.split();
+        read.next().await;
         write
             .send(Message::binary(b"0123456789abcdeeC++\xc0".as_ref()))
             .await?;
@@ -422,7 +434,8 @@ mod tests {
     async fn test_server_kill_compile(listener: tokio::net::TcpListener) -> Result<(), Error> {
         let (stream, _) = listener.accept().await?;
         let ws_stream = tokio_tungstenite::accept_async(stream).await?;
-        let (mut write, _) = ws_stream.split();
+        let (mut write, mut read) = ws_stream.split();
+        read.next().await;
         write
             .send(Message::binary(b"0123456789abcdedC++\xc0".as_ref()))
             .await?;
@@ -439,6 +452,7 @@ mod tests {
         let (stream, _) = listener.accept().await?;
         let ws_stream = tokio_tungstenite::accept_async(stream).await?;
         let (mut write, mut read) = ws_stream.split();
+        read.next().await;
         write
             .send(Message::binary(b"0123456789abcdecC++\xc0".as_ref()))
             .await?;
@@ -460,7 +474,8 @@ mod tests {
     ) -> Result<(), Error> {
         let (stream, _) = listener.accept().await?;
         let ws_stream = tokio_tungstenite::accept_async(stream).await?;
-        let (mut write, _) = ws_stream.split();
+        let (mut write, mut read) = ws_stream.split();
+        read.next().await;
         write
             .send(Message::binary(b"0123456789abcdebC++\xc0".as_ref()))
             .await?;

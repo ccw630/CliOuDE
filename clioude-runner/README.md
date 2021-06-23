@@ -4,7 +4,7 @@
 
 1. Connect Server through WebSocket
 2. Send runner info includes
-   * System info(CPU/Memory/OS Version/...)
+   * Environment info(CPU/Memory/OS Version/...)
    * Available language & executables(GCC/Python/...)
 3. Prepare on Server responds with
    1. RunID(16 bytes) + Language
@@ -29,6 +29,7 @@ Exactly one flag at the end of each message.
 * `\xe0`: stdin append
 * `\xe1`: stdout append
 * `\xe2`: stderr append
+* `\xe5`: environment info
 * `\xe6`: cpu/memory usage
 * `\xe7`: status info
 * `\xe8`: exit info
