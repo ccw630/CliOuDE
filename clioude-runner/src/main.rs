@@ -1,27 +1,29 @@
+use futures::{future, pin_mut, stream, SinkExt, StreamExt};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::env;
-use std::time::SystemTime;
 use std::fs;
 use std::fs::File;
 use std::io::prelude::*;
 use std::process::Stdio;
-use url::Url;
-use futures::{future, pin_mut, SinkExt, StreamExt};
+use std::time::SystemTime;
 use sysinfo::{ProcessExt, ProcessorExt, Signal, System, SystemExt};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::process::Command;
 use tokio::time::{sleep, Duration};
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message, tungstenite::Error};
-use serde::{Deserialize, Serialize};
+use url::Url;
 
 #[tokio::main]
 async fn main() {
     let connect_addr = env::args()
         .nth(1)
         .unwrap_or_else(|| panic!("this program requires at least one argument"));
+    let language_conf_path = env::args().nth(2).unwrap_or("languages.json".to_string());
 
     let url = Url::parse(&connect_addr).unwrap();
     // loop {
-    let mut runner = Run::new();
+    let mut runner = Run::new(&language_conf_path);
     match runner.run(&url).await {
         Ok(_) => (),
         Err(err) => println!("FATAL: Run {} ERROR {:?}", runner.id, err),
@@ -33,13 +35,19 @@ async fn main() {
 struct Run {
     id: String,
     pid: Option<u32>,
+    // TODO Immutable
+    _language_conf: HashMap<String, Language>,
 }
 
 impl Run {
-    fn new() -> Run {
+    fn new(language_conf_path: &str) -> Run {
         Run {
             id: String::new(),
             pid: None,
+            _language_conf: serde_json::from_str(
+                &fs::read_to_string(language_conf_path).expect("Load language conf failed!"),
+            )
+            .expect("Extract language conf failed!"),
         }
     }
 
@@ -50,12 +58,41 @@ impl Run {
         let mut process: Option<tokio::process::Child> = None;
         let mut cmd: Command;
         let mut sys = System::new();
+        let available_languages = stream::iter(&self._language_conf)
+            .filter_map(|(k, v)| async move {
+                if let Ok(check) = get_command(&v.check_command)
+                    .stdout(Stdio::piped())
+                    .stderr(Stdio::piped())
+                    .spawn()
+                {
+                    let output = check.wait_with_output().await;
+                    if let Ok(output) = output {
+                        if output.status.success() {
+                            return Some((
+                                k.to_owned(),
+                                format!(
+                                    "{}{}",
+                                    String::from_utf8_lossy(&output.stdout).into_owned(),
+                                    String::from_utf8_lossy(&output.stderr).into_owned()
+                                ),
+                            ));
+                        }
+                    }
+                }
+                return None;
+            })
+            .collect::<HashMap<String, String>>()
+            .await;
+
         sys.refresh_memory();
         let env_info = EnvInfo {
             cpu_freq: sys.get_global_processor_info().get_frequency(),
-            total_memory: sys.get_total_memory()
+            total_memory: sys.get_total_memory(),
+            available_languages,
         };
-        ws_writer.send(Message::binary(serde_json::to_string(&env_info).unwrap())).await?;
+        ws_writer
+            .send(Message::binary(serde_json::to_string(&env_info).unwrap()))
+            .await?;
         loop {
             let message = match ws_reader.next().await {
                 Some(message) => message,
@@ -68,12 +105,19 @@ impl Run {
                     language = Some(String::from_utf8_lossy(&data[16..]).into_owned());
                 }
                 Some(0xc1u8) => {
-                    let single_run = get_raw_run(&language);
+                    let lang = match language {
+                        Some(lang) => self
+                            ._language_conf
+                            .get(&lang.to_lowercase())
+                            .expect("No such language"),
+                        None => panic!("No language received"),
+                    };
                     let path = format!("run/{}", self.id);
                     fs::create_dir_all(&path)?;
-                    let mut file = File::create(format!("{}/{}", &path, single_run.file))?;
+                    let mut file = File::create(format!("{}/{}", &path, lang.file))?;
                     file.write_all(&data)?;
-                    if let Some(mut compile_command) = single_run.compile_command {
+                    if let Some(compile_command_raw) = &lang.compile_command {
+                        let mut compile_command = get_command(compile_command_raw);
                         let p = compile_command
                             .current_dir(&path)
                             .stdout(Stdio::piped())
@@ -85,7 +129,7 @@ impl Run {
                             .send(Message::binary(vec![RunStatus::Compiling as u8, 0xe7]))
                             .await?;
                     }
-                    let mut run_command = single_run.run_command;
+                    let mut run_command = get_command(&lang.run_command);
                     run_command.current_dir(&path);
                     cmd = run_command;
                     break;
@@ -153,7 +197,12 @@ impl Run {
                     loop_tx
                         .unbounded_send(
                             [
-                                now.elapsed().unwrap().as_secs_f64().to_bits().to_be_bytes().to_vec(),
+                                now.elapsed()
+                                    .unwrap()
+                                    .as_secs_f64()
+                                    .to_bits()
+                                    .to_be_bytes()
+                                    .to_vec(),
                                 process.cpu_usage().to_bits().to_be_bytes().to_vec(),
                                 process.memory().to_be_bytes().to_vec(),
                                 vec![0xe6],
@@ -272,51 +321,28 @@ enum RunStatus {
     RuntimeError,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct EnvInfo {
     cpu_freq: u64,
-    total_memory: u64
+    total_memory: u64,
+    available_languages: HashMap<String, String>,
 }
 
-struct SingleRun {
+#[derive(Serialize, Deserialize, Debug)]
+struct Language {
     file: String,
-    run_command: Command,
-    compile_command: Option<Command>,
+    check_command: String,
+    run_command: String,
+    compile_command: Option<String>,
 }
 
-fn get_raw_run(lang: &Option<String>) -> SingleRun {
-    match lang.as_deref() {
-        Some("C++") => {
-            let file = String::from("main.cpp");
-            let mut compile_command = Command::new("g++");
-            compile_command.arg("-O2");
-            compile_command.arg("-w");
-            compile_command.arg("-fmax-errors=3");
-            compile_command.arg("-std=c++17");
-            compile_command.arg(&file);
-            compile_command.arg("-lm");
-            compile_command.arg("-o");
-            compile_command.arg("./main");
-            let run_command = Command::new("./main");
-            SingleRun {
-                file,
-                run_command,
-                compile_command: Some(compile_command),
-            }
-        }
-        Some("Python") => {
-            let file = String::from("main.py");
-            let mut run_command = Command::new("python3");
-            run_command.arg(&file);
-            SingleRun {
-                file,
-                run_command,
-                compile_command: None,
-            }
-        }
-        Some(_) => panic!("No such language"),
-        None => panic!("No language received"),
+fn get_command(raw: &String) -> Command {
+    let mut args = raw.split_ascii_whitespace();
+    let mut command = Command::new(args.next().unwrap());
+    for arg in args {
+        command.arg(arg);
     }
+    command
 }
 
 #[cfg(test)]
@@ -326,7 +352,7 @@ mod tests {
     #[tokio::test]
     async fn integration_test_ok() {
         let (listener, url) = before_test().await;
-        let mut run = Run::new();
+        let mut run = Run::new("bin/languages.json");
         let (_a, _b) = future::join(test_server_ok(listener), run.run(&url)).await;
         _a.unwrap();
         _b.unwrap();
@@ -335,7 +361,7 @@ mod tests {
     #[tokio::test]
     async fn integration_test_kill() {
         let (listener, url) = before_test().await;
-        let mut run = Run::new();
+        let mut run = Run::new("bin/languages.json");
         let (_a, _b) = future::join(test_server_kill(listener), run.run(&url)).await;
         _a.unwrap();
         assert!(matches!(_b.unwrap(), ExitStatus::Killed));
@@ -344,7 +370,7 @@ mod tests {
     #[tokio::test]
     async fn integration_test_kill_compile() {
         let (listener, url) = before_test().await;
-        let mut run = Run::new();
+        let mut run = Run::new("bin/languages.json");
         let (_a, _b) = future::join(test_server_kill_compile(listener), run.run(&url)).await;
         _a.unwrap();
         assert!(matches!(_b.unwrap(), ExitStatus::CompileInterrupted));
@@ -353,7 +379,7 @@ mod tests {
     #[tokio::test]
     async fn integration_test_fail_compile() {
         let (listener, url) = before_test().await;
-        let mut run = Run::new();
+        let mut run = Run::new("bin/languages.json");
         let (_a, _b) = future::join(test_server_fail_compile(listener), run.run(&url)).await;
         _a.unwrap();
         assert!(matches!(_b.unwrap(), ExitStatus::CompileError));
@@ -362,7 +388,7 @@ mod tests {
     #[tokio::test]
     async fn integration_test_disconnect_on_start() {
         let (listener, url) = before_test().await;
-        let mut run = Run::new();
+        let mut run = Run::new("bin/languages.json");
         let (_a, _b) = future::join(test_server_disconnect_on_start(listener), run.run(&url)).await;
         _a.unwrap();
         assert!(matches!(_b.unwrap(), ExitStatus::StartInterrupted));

@@ -1,0 +1,14 @@
+{
+    "c++" : {
+        "file": "main.cc",
+        "check_command": "g++ -v",
+        "compile_command": "g++ -O2 -w -fmax-errors=3 -std=c++17 main.cc -lm -o ./main",
+        "run_command": "./main"
+    },
+    "python" : {
+        "file": "main.py",
+        "check_command": "python3 -VV",
+        "compile_command": null,
+        "run_command": "python3 main.py"
+    }
+}
