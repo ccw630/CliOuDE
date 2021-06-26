@@ -26,7 +26,10 @@ async fn main() {
     let mut runner = Run::new(&language_conf_path);
     match runner.run(&url).await {
         Ok(_) => (),
-        Err(err) => println!("FATAL: Run {} ERROR {:?}", runner.id, err),
+        Err(err) => {
+            runner.cleanup();
+            println!("FATAL: Run {} ERROR {:?}", runner.id, err);
+        }
     }
 
     // }
