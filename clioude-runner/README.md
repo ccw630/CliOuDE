@@ -1,4 +1,4 @@
-# CliOuDE-Runner
+# CliOuDE Runner
 
 ## Process Flow
 
