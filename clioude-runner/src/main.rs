@@ -104,8 +104,8 @@ impl Run {
             let mut data = message?.into_data();
             match data.pop() {
                 Some(0xc0u8) => {
-                    self.id = String::from_utf8_lossy(&data[..16]).into_owned();
-                    language = Some(String::from_utf8_lossy(&data[16..]).into_owned());
+                    self.id = String::from_utf8_lossy(&data[..36]).into_owned();
+                    language = Some(String::from_utf8_lossy(&data[36..]).into_owned());
                 }
                 Some(0xc1u8) => {
                     let lang = match language {
@@ -119,9 +119,9 @@ impl Run {
                     fs::create_dir_all(&path)?;
                     let mut file = File::create(format!("{}/{}", &path, lang.file))?;
                     file.write_all(&data)?;
-                    if let Some(compile_command_raw) = &lang.compile_command {
-                        let mut compile_command = get_command(compile_command_raw);
-                        let p = compile_command
+                    if let Some(prepare_command_raw) = &lang.prepare_command {
+                        let mut prepare_command = get_command(prepare_command_raw);
+                        let p = prepare_command
                             .current_dir(&path)
                             .stdout(Stdio::piped())
                             .stderr(Stdio::piped())
@@ -129,7 +129,7 @@ impl Run {
                         self.pid = p.id();
                         process = Some(p);
                         ws_writer
-                            .send(Message::binary(vec![RunStatus::Compiling as u8, 0xe7]))
+                            .send(Message::binary(vec![RunStatus::Preparing as u8, 0xe7]))
                             .await?;
                     }
                     let mut run_command = get_command(&lang.run_command);
@@ -146,7 +146,7 @@ impl Run {
             match future::select(_f1, _f2).await {
                 future::Either::Left(_) => {
                     self.cleanup();
-                    return Ok(ExitStatus::CompileInterrupted);
+                    return Ok(ExitStatus::PrepareInterrupted);
                 }
                 future::Either::Right((output, _)) => {
                     let output = output?;
@@ -158,9 +158,9 @@ impl Run {
                             .send(Message::binary([output.stderr, vec![0xe2]].concat()))
                             .await?;
                         ws_writer
-                            .send(Message::binary(vec![RunStatus::CompileError as u8, 0xe8]))
+                            .send(Message::binary(vec![RunStatus::PrepareError as u8, 0xe8]))
                             .await?;
-                        return Ok(ExitStatus::CompileError);
+                        return Ok(ExitStatus::PrepareError);
                     }
                 }
             }
@@ -254,6 +254,10 @@ impl Run {
                     Err(err) => println!("FATAL: {:?} at send message", err),
                 };
                 if last == 0xe8u8 {
+                    // ws_writer.send(Message::Close(Some(CloseFrame {
+                    //     code: CloseCode::Normal,
+                    //     reason: "".into()
+                    // }))).await.unwrap();
                     ws_writer.close().await.unwrap();
                 }
             }
@@ -280,12 +284,15 @@ impl Run {
     }
 
     fn cleanup(&self) -> ExitStatus {
+        // todo remove dir
         let mut s = System::new();
-        let pid = self.pid.unwrap() as i32;
-        s.refresh_process(pid);
-        if let Some(process) = s.get_process(pid) {
-            process.kill(Signal::Kill);
-            return ExitStatus::Killed;
+        if let Some(p) = self.pid {
+            let pid = p as i32;
+            s.refresh_process(pid);
+            if let Some(process) = s.get_process(pid) {
+                process.kill(Signal::Kill);
+                return ExitStatus::Killed;
+            }
         }
         ExitStatus::Done
     }
@@ -310,16 +317,16 @@ async fn pipe(
 
 enum ExitStatus {
     StartInterrupted,
-    CompileError,
-    CompileInterrupted,
+    PrepareError,
+    PrepareInterrupted,
     Killed,
     Done,
 }
 
 enum RunStatus {
     Running = 0,
-    Compiling,
-    CompileError,
+    Preparing,
+    PrepareError,
     Ok,
     RuntimeError,
 }
@@ -336,7 +343,7 @@ struct Language {
     file: String,
     check_command: String,
     run_command: String,
-    compile_command: Option<String>,
+    prepare_command: Option<String>,
 }
 
 fn get_command(raw: &String) -> Command {
@@ -355,7 +362,7 @@ mod tests {
     #[tokio::test]
     async fn integration_test_ok() {
         let (listener, url) = before_test().await;
-        let mut run = Run::new("bin/languages.json");
+        let mut run = Run::new("etc/languages.json");
         let (_a, _b) = future::join(test_server_ok(listener), run.run(&url)).await;
         _a.unwrap();
         _b.unwrap();
@@ -364,34 +371,34 @@ mod tests {
     #[tokio::test]
     async fn integration_test_kill() {
         let (listener, url) = before_test().await;
-        let mut run = Run::new("bin/languages.json");
+        let mut run = Run::new("etc/languages.json");
         let (_a, _b) = future::join(test_server_kill(listener), run.run(&url)).await;
         _a.unwrap();
         assert!(matches!(_b.unwrap(), ExitStatus::Killed));
     }
 
     #[tokio::test]
-    async fn integration_test_kill_compile() {
+    async fn integration_test_kill_prepare() {
         let (listener, url) = before_test().await;
-        let mut run = Run::new("bin/languages.json");
-        let (_a, _b) = future::join(test_server_kill_compile(listener), run.run(&url)).await;
+        let mut run = Run::new("etc/languages.json");
+        let (_a, _b) = future::join(test_server_kill_prepare(listener), run.run(&url)).await;
         _a.unwrap();
-        assert!(matches!(_b.unwrap(), ExitStatus::CompileInterrupted));
+        assert!(matches!(_b.unwrap(), ExitStatus::PrepareInterrupted));
     }
 
     #[tokio::test]
-    async fn integration_test_fail_compile() {
+    async fn integration_test_fail_prepare() {
         let (listener, url) = before_test().await;
-        let mut run = Run::new("bin/languages.json");
-        let (_a, _b) = future::join(test_server_fail_compile(listener), run.run(&url)).await;
+        let mut run = Run::new("etc/languages.json");
+        let (_a, _b) = future::join(test_server_fail_prepare(listener), run.run(&url)).await;
         _a.unwrap();
-        assert!(matches!(_b.unwrap(), ExitStatus::CompileError));
+        assert!(matches!(_b.unwrap(), ExitStatus::PrepareError));
     }
 
     #[tokio::test]
     async fn integration_test_disconnect_on_start() {
         let (listener, url) = before_test().await;
-        let mut run = Run::new("bin/languages.json");
+        let mut run = Run::new("etc/languages.json");
         let (_a, _b) = future::join(test_server_disconnect_on_start(listener), run.run(&url)).await;
         _a.unwrap();
         assert!(matches!(_b.unwrap(), ExitStatus::StartInterrupted));
@@ -414,7 +421,7 @@ mod tests {
         let (mut write, mut read) = ws_stream.split();
         read.next().await;
         write
-            .send(Message::binary(b"0123456789abcdefC++\xc0".as_ref()))
+            .send(Message::binary(b"00000000-0000-0000-0000-000000000001C++\xc0".as_ref()))
             .await?;
         write.send(Message::binary(b"#include<iostream>\nusing namespace std;int main(){int n;cin>>n;cout<<n+1<<endl;cerr<<n+2<<endl;}\n\xc1".as_ref())).await?;
         assert_eq!(
@@ -441,7 +448,7 @@ mod tests {
         let (mut write, mut read) = ws_stream.split();
         read.next().await;
         write
-            .send(Message::binary(b"0123456789abcdeeC++\xc0".as_ref()))
+            .send(Message::binary(b"00000000-0000-0000-0000-000000000002C++\xc0".as_ref()))
             .await?;
         write
             .send(Message::binary(
@@ -460,13 +467,13 @@ mod tests {
         Ok(())
     }
 
-    async fn test_server_kill_compile(listener: tokio::net::TcpListener) -> Result<(), Error> {
+    async fn test_server_kill_prepare(listener: tokio::net::TcpListener) -> Result<(), Error> {
         let (stream, _) = listener.accept().await?;
         let ws_stream = tokio_tungstenite::accept_async(stream).await?;
         let (mut write, mut read) = ws_stream.split();
         read.next().await;
         write
-            .send(Message::binary(b"0123456789abcdedC++\xc0".as_ref()))
+            .send(Message::binary(b"00000000-0000-0000-0000-000000000003C++\xc0".as_ref()))
             .await?;
         write
             .send(Message::binary(
@@ -477,13 +484,13 @@ mod tests {
         Ok(())
     }
 
-    async fn test_server_fail_compile(listener: tokio::net::TcpListener) -> Result<(), Error> {
+    async fn test_server_fail_prepare(listener: tokio::net::TcpListener) -> Result<(), Error> {
         let (stream, _) = listener.accept().await?;
         let ws_stream = tokio_tungstenite::accept_async(stream).await?;
         let (mut write, mut read) = ws_stream.split();
         read.next().await;
         write
-            .send(Message::binary(b"0123456789abcdecC++\xc0".as_ref()))
+            .send(Message::binary(b"00000000-0000-0000-0000-000000000004C++\xc0".as_ref()))
             .await?;
         write
             .send(Message::binary(
@@ -506,7 +513,7 @@ mod tests {
         let (mut write, mut read) = ws_stream.split();
         read.next().await;
         write
-            .send(Message::binary(b"0123456789abcdebC++\xc0".as_ref()))
+            .send(Message::binary(b"00000000-0000-0000-0000-000000000005C++\xc0".as_ref()))
             .await?;
         sleep(Duration::from_millis(1000)).await;
         write.close().await?;
