@@ -20,7 +20,7 @@ const (
 	pingPeriod = (pongWait * 9) / 10
 
 	// Maximum message size allowed from peer.
-	maxMessageSize = 512
+	// maxMessageSize = 65536
 )
 
 var upgrader = websocket.Upgrader{
@@ -48,11 +48,11 @@ func (c *Runner) readPump() {
 		c.hub.unregister <- c
 		c.conn.Close()
 	}()
-	c.conn.SetReadLimit(maxMessageSize)
+	// c.conn.SetReadLimit(maxMessageSize)
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	_, message, err := c.conn.ReadMessage()
-	log.Println("Received:", string(message))
+	log.Println("Received:", string(message), err)
 	if err != nil {
 		if websocket.IsUnexpectedCloseError(err, websocket.CloseNoStatusReceived, websocket.CloseNormalClosure) {
 			log.Printf("error on initializing runner: %v", err)
@@ -126,18 +126,18 @@ func (c *Runner) writePump() {
 	}
 }
 
-// serveWs handles websocket requests from the peer.
-func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
+// serveRunner handles websocket requests from the peer.
+func ServeRunner(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	client := &Runner{hub: hub, conn: conn, send: make(chan []byte, 256)}
+	runner := &Runner{hub: hub, conn: conn, send: make(chan []byte, 256)}
 
 	// Allow collection of memory referenced by the caller by doing all work in
 	// new goroutines.
-	go client.writePump()
-	go client.readPump()
+	go runner.writePump()
+	go runner.readPump()
 }
