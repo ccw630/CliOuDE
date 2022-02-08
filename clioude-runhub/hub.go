@@ -10,59 +10,66 @@ import (
 // clients.
 type Hub struct {
 	// Registered runners.
-	runners map[*Runner]RunnerInfo
+	runners map[*Runner]bool
 
-	// Inbound messages from the clients.
-	broadcast chan []byte
+	// Register requests from the runners.
+	register chan *Runner
 
-	// Register requests from the clients.
-	register chan RunnerInfo
-
-	// Unregister requests from clients.
+	// Unregister requests from runners.
 	unregister chan *Runner
-}
 
-type RunnerInfo struct {
-	id     string
-	runner *Runner
-	conf   string
+	// Connect requests from clients.
+	connect chan *Client
+
+	// Disconnect requests from clients.
+	disconnect chan *Client
 }
 
 func NewHub() *Hub {
 	return &Hub{
-		broadcast:  make(chan []byte),
-		register:   make(chan RunnerInfo),
+		register:   make(chan *Runner),
 		unregister: make(chan *Runner),
-		runners:    make(map[*Runner]RunnerInfo),
+		connect:    make(chan *Client),
+		disconnect: make(chan *Client),
+		runners:    make(map[*Runner]bool),
 	}
 }
 
 func (h *Hub) Run() {
 	for {
 		select {
-		case runnerAndConf := <-h.register:
+		case runner := <-h.register:
 			id := uuid.New().String()
-			runner := runnerAndConf.runner
-			h.runners[runner] = runnerAndConf
 			runner.send <- []byte(id + "C++\xc0")
 			runner.send <- []byte("#include<iostream>\nusing namespace std;int main(){int n;cin>>n;cout<<n<<endl;}\n\xc1")
-			runnerAndConf.id = id
-			log.Println("Add runner to hub:", runnerAndConf)
+			runner.id = id
+			h.runners[runner] = true
+			log.Println("Add runner to hub:", runner)
 		case runner := <-h.unregister:
-			if runnerInfo, ok := h.runners[runner]; ok {
-				log.Println("Remove runner to hub:", runnerInfo)
+			if _, ok := h.runners[runner]; ok {
+				log.Println("Remove runner to hub:", runner)
 				delete(h.runners, runner)
 				close(runner.send)
 			}
-			// case message := <-h.broadcast:
-			// 	for client := range h.clients {
-			// 		select {
-			// 		case client.send <- message:
-			// 		default:
-			// 			close(client.send)
-			// 			delete(h.clients, client)
-			// 		}
-			// 	}
+		case client := <-h.connect:
+			log.Println("Connection from client:", client)
+			for runner := range h.runners {
+				if runner.ready && runner.client == nil {
+					log.Println("Find runner for client:", runner.id)
+					client.runner = runner
+					select {
+					case buffer := <-runner.buffer:
+						client.send <- buffer
+					default:
+					}
+					runner.client = client
+					break
+				}
+			}
+		case client := <-h.disconnect:
+			log.Println("Client disconnect:", client)
+			client.runner.client = nil
+			client.runner = nil
 		}
 	}
 }

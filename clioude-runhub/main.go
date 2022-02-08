@@ -16,6 +16,9 @@ func main() {
 	http.HandleFunc("/endpoint-r", func(w http.ResponseWriter, r *http.Request) {
 		ServeRunner(hub, w, r)
 	})
+	http.HandleFunc("/endpoint-c", func(w http.ResponseWriter, r *http.Request) {
+		ServeClient(hub, w, r)
+	})
 	err := http.ListenAndServe(*addr, nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
