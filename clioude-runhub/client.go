@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -15,7 +16,9 @@ type Client struct {
 
 	send chan []byte
 
-	runner *Runner
+	session *Session
+
+	closing chan bool
 }
 
 func (c *Client) readPump() {
@@ -36,7 +39,8 @@ func (c *Client) readPump() {
 			}
 			break
 		}
-		c.runner.send <- message
+		c.session.runner.inputBarrier.Wait()
+		c.session.runner.send <- append(message, 0x10, 0xe0)
 	}
 }
 
@@ -55,12 +59,12 @@ func (c *Client) writePump() {
 				return
 			}
 
-			w, err := c.conn.NextWriter(websocket.BinaryMessage)
+			w, err := c.conn.NextWriter(websocket.TextMessage)
 			if err != nil {
 				return
 			}
 			log.Println("Send to client:", message)
-			w.Write(message)
+			w.Write(message[0 : len(message)-1])
 
 			if err := w.Close(); err != nil {
 				return
@@ -70,18 +74,32 @@ func (c *Client) writePump() {
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
+		case <-c.closing:
+			return
 		}
 	}
 }
 
 func ServeClient(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+
+	query := r.URL.Query()
+	sessionId := query.Get("session_id")
+
+	session := hub.sessions[sessionId]
+	if session == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(400)
+		fmt.Fprintf(w, "Invalid session ID")
+		return
+	}
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 256)}
+	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 256), session: session, closing: make(chan bool)}
 
 	go client.writePump()
 	go client.readPump()

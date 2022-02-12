@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -36,11 +37,11 @@ type Runner struct {
 	// Buffered channel of outbound messages.
 	send chan []byte
 
-	id     string
-	client *Client
-	buffer chan []byte
-	conf   string
-	ready  bool
+	id           string
+	session      *Session
+	buffer       chan []byte
+	conf         string
+	inputBarrier sync.WaitGroup
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -66,6 +67,7 @@ func (r *Runner) readPump() {
 	}
 	r.conf = string(message)
 	r.hub.register <- r
+	r.inputBarrier.Add(1)
 	for {
 		_, message, err := r.conn.ReadMessage()
 		log.Println("Received from runner:", message)
@@ -77,19 +79,19 @@ func (r *Runner) readPump() {
 		}
 		lastByte := message[len(message)-1]
 		if lastByte == 0xe7 {
+			// status info
 			if message[0] == 0 {
-				r.ready = true
-				r.send <- []byte("1\n\xe0")
+				r.inputBarrier.Done()
 			}
 		} else if lastByte == 0xe6 {
 			// usage metrics
 		} else if lastByte == 0xe8 {
 			// exit info
 		} else {
-			if r.client == nil {
+			if r.session.client == nil {
 				r.buffer <- message
 			} else {
-				r.client.send <- message
+				r.session.client.send <- message
 			}
 		}
 	}
@@ -120,7 +122,7 @@ func (r *Runner) writePump() {
 			if err != nil {
 				return
 			}
-			log.Println("Send to runner:", string(message))
+			log.Println("Send to runner:", message)
 			w.Write(message)
 
 			if err := w.Close(); err != nil {
