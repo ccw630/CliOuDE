@@ -29,7 +29,6 @@ Exactly one flag at the end of each message.
 * `\xe0`: stdin append
 * `\xe1`: stdout append
 * `\xe2`: stderr append
-* `\xe5`: environment info
 * `\xe6`: cpu/memory usage
 * `\xe7`: status info
 * `\xe8`: exit info

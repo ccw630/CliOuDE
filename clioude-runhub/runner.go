@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ccw630/clioude/clioude-runhub/protocol"
 	"github.com/gorilla/websocket"
 )
 
@@ -77,15 +78,15 @@ func (r *Runner) readPump() {
 			}
 			break
 		}
-		lastByte := message[len(message)-1]
-		if lastByte == 0xe7 {
+		flag, message := protocol.ParseMessage(message)
+		if flag == protocol.StatusInfo {
 			// status info
 			if message[0] == 0 {
 				r.inputBarrier.Done()
 			}
-		} else if lastByte == 0xe6 {
+		} else if flag == protocol.UsageInfo {
 			// usage metrics
-		} else if lastByte == 0xe8 {
+		} else if flag == protocol.ExitInfo {
 			// exit info
 		} else {
 			if r.session.client == nil {

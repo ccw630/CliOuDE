@@ -50,8 +50,11 @@ func (h *Hub) Run() {
 		case runner := <-h.unregister:
 			if _, ok := h.runners[runner]; ok {
 				log.Println("Remove runner to hub:", runner.id)
-				if runner.session != nil && runner.session.client != nil {
-					runner.session.client.closing <- true
+				if runner.session != nil {
+					if runner.session.client != nil {
+						runner.session.client.closing <- true
+					}
+					delete(h.sessions, runner.session.id)
 				}
 				delete(h.runners, runner)
 				close(runner.send)
@@ -67,8 +70,7 @@ func (h *Hub) Run() {
 		case client := <-h.disconnect:
 			close(client.send)
 			session := client.session
-			delete(h.sessions, session.id)
-			session.runner.session = nil
+			session.client = nil
 		}
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ccw630/clioude/clioude-runhub/protocol"
 	"github.com/gorilla/websocket"
 )
 
@@ -40,7 +41,7 @@ func (c *Client) readPump() {
 			break
 		}
 		c.session.runner.inputBarrier.Wait()
-		c.session.runner.send <- append(message, 0x10, 0xe0)
+		c.session.runner.send <- protocol.InputMessage(message)
 	}
 }
 
@@ -64,7 +65,7 @@ func (c *Client) writePump() {
 				return
 			}
 			log.Println("Send to client:", message)
-			w.Write(message[0 : len(message)-1])
+			w.Write(message)
 
 			if err := w.Close(); err != nil {
 				return

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/ccw630/clioude/clioude-runhub/protocol"
 	"github.com/google/uuid"
 )
 
@@ -55,8 +56,8 @@ func createSession(hub *Hub, w http.ResponseWriter, r *http.Request) {
 			hub.sessions[id] = session
 			runner.session = session
 
-			runner.send <- []byte(runner.id + params.Language + "\xc0")
-			runner.send <- []byte(params.Script + "\xc1")
+			runner.send <- protocol.InitMessage(runner.id, params.Language)
+			runner.send <- protocol.CodeMessage(params.Script)
 
 			json.NewEncoder(w).Encode(SessionResponse{
 				SessionId: id,
