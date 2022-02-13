@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ccw630/clioude/clioude-runhub/protocol"
+	"github.com/ccw630/clioude/hub/protocol"
 	"github.com/gorilla/websocket"
 )
 

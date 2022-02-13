@@ -1,4 +1,4 @@
-module github.com/ccw630/clioude/clioude-runhub
+module github.com/ccw630/clioude/hub
 
 go 1.16
 

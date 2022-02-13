@@ -1,3 +1,0 @@
-# CliOuDE - Server
-
-Backend.

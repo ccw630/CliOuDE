@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/ccw630/clioude/clioude-runhub/protocol"
+	"github.com/ccw630/clioude/hub/protocol"
 	"github.com/google/uuid"
 )
 
