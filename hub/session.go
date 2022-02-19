@@ -12,14 +12,20 @@ import (
 type Session struct {
 	id string
 
-	client *Client
+	ioPump *IOPump
+
+	statusPump *StatusPump
 
 	runner *Runner
+
+	currentStatus protocol.RunStatus
+
+	exitCode byte
 }
 
 type SessionRequest struct {
 	Language string `json:"language"`
-	Script   string `json:"script"`
+	Code     string `json:"code"`
 }
 
 type SessionResponse struct {
@@ -27,6 +33,15 @@ type SessionResponse struct {
 }
 
 func createSession(hub *Hub, w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Headers", "*")
+
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(200)
+		return
+	}
+
 	if r.Method != "POST" {
 		w.WriteHeader(405)
 		return
@@ -44,7 +59,6 @@ func createSession(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	for runner := range hub.runners {
 		if runner.session == nil {
 
-			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(200)
 
 			id := uuid.New().String()
@@ -57,7 +71,7 @@ func createSession(hub *Hub, w http.ResponseWriter, r *http.Request) {
 			runner.session = session
 
 			runner.send <- protocol.InitMessage(runner.id, params.Language)
-			runner.send <- protocol.CodeMessage(params.Script)
+			runner.send <- protocol.CodeMessage(params.Code)
 
 			json.NewEncoder(w).Encode(SessionResponse{
 				SessionId: id,
@@ -66,7 +80,6 @@ func createSession(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(400)
 	fmt.Fprintf(w, "No available runner")
 

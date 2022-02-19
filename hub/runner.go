@@ -4,43 +4,16 @@ import (
 	"log"
 	"net/http"
 	"sync"
-	"time"
 
 	"github.com/ccw630/clioude/hub/protocol"
 	"github.com/gorilla/websocket"
 )
 
-const (
-	// Time allowed to write a message to the peer.
-	writeWait = 10 * time.Second
-
-	// Time allowed to read the next pong message from the peer.
-	pongWait = 60 * time.Second
-
-	// Send pings to peer with this period. Must be less than pongWait.
-	pingPeriod = (pongWait * 9) / 10
-
-	// Maximum message size allowed from peer.
-	// maxMessageSize = 65536
-)
-
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-}
-
 type Runner struct {
-	hub *Hub
-
-	// The websocket connection.
-	conn *websocket.Conn
-
-	// Buffered channel of outbound messages.
-	send chan []byte
-
-	id           string
+	*Client
 	session      *Session
 	buffer       chan []byte
+	id           string
 	conf         string
 	inputBarrier sync.WaitGroup
 }
@@ -55,9 +28,7 @@ func (r *Runner) readPump() {
 		r.hub.unregister <- r
 		r.conn.Close()
 	}()
-	// c.conn.SetReadLimit(maxMessageSize)
-	r.conn.SetReadDeadline(time.Now().Add(pongWait))
-	r.conn.SetPongHandler(func(string) error { r.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	r.init()
 	_, message, err := r.conn.ReadMessage()
 	log.Println("Received from runner:", message)
 	if err != nil {
@@ -80,59 +51,26 @@ func (r *Runner) readPump() {
 		}
 		flag, message := protocol.ParseMessage(message)
 		if flag == protocol.StatusInfo {
-			// status info
-			if message[0] == 0 {
+			if message[0] == byte(protocol.Running) {
 				r.inputBarrier.Done()
+			}
+			status := message[0]
+			r.session.currentStatus = protocol.RunStatus(status)
+			if r.session.statusPump != nil {
+				r.session.statusPump.send <- protocol.ParseStatus(status)
 			}
 		} else if flag == protocol.UsageInfo {
 			// usage metrics
 		} else if flag == protocol.ExitInfo {
-			// exit info
+			r.session.exitCode = message[0]
+			if r.session.statusPump != nil {
+				r.session.statusPump.send <- protocol.ParseExitCode(message)
+			}
 		} else {
-			if r.session.client == nil {
+			if r.session.ioPump == nil {
 				r.buffer <- message
 			} else {
-				r.session.client.send <- message
-			}
-		}
-	}
-}
-
-// writePump pumps messages from the hub to the websocket connection.
-//
-// A goroutine running writePump is started for each connection. The
-// application ensures that there is at most one writer to a connection by
-// executing all writes from this goroutine.
-func (r *Runner) writePump() {
-	ticker := time.NewTicker(pingPeriod)
-	defer func() {
-		ticker.Stop()
-		r.conn.Close()
-	}()
-	for {
-		select {
-		case message, ok := <-r.send:
-			r.conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if !ok {
-				// The hub closed the channel.
-				r.conn.WriteMessage(websocket.CloseMessage, []byte{})
-				return
-			}
-
-			w, err := r.conn.NextWriter(websocket.BinaryMessage)
-			if err != nil {
-				return
-			}
-			log.Println("Send to runner:", message)
-			w.Write(message)
-
-			if err := w.Close(); err != nil {
-				return
-			}
-		case <-ticker.C:
-			r.conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if err := r.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-				return
+				r.session.ioPump.send <- message
 			}
 		}
 	}
@@ -146,7 +84,17 @@ func ServeRunner(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
-	runner := &Runner{hub: hub, conn: conn, send: make(chan []byte, 256), buffer: make(chan []byte)}
+	runner := &Runner{
+		Client: &Client{
+			hub:         hub,
+			conn:        conn,
+			send:        make(chan []byte, 256),
+			closing:     make(chan bool),
+			messageType: websocket.BinaryMessage,
+			clientType:  "runner",
+		},
+		buffer: make(chan []byte),
+	}
 
 	// Allow collection of memory referenced by the caller by doing all work in
 	// new goroutines.

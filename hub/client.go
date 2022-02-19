@@ -10,38 +10,93 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-type Client struct {
-	hub *Hub
+const (
+	// Time allowed to write a message to the peer.
+	writeWait = 10 * time.Second
 
-	conn *websocket.Conn
+	// Time allowed to read the next pong message from the peer.
+	pongWait = 60 * time.Second
 
-	send chan []byte
+	// Send pings to peer with this period. Must be less than pongWait.
+	pingPeriod = (pongWait * 9) / 10
 
-	session *Session
+	// Maximum message size allowed from peer.
+	// maxMessageSize = 65536
+)
 
-	closing chan bool
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
 }
 
-func (c *Client) readPump() {
+type Client struct {
+	hub         *Hub
+	conn        *websocket.Conn
+	send        chan []byte
+	closing     chan bool
+	messageType int
+	clientType  string
+}
+
+type IClient interface {
+	readPump()
+	writePump()
+}
+
+type IOPump struct {
+	*Client
+	runner *Runner
+}
+
+type StatusPump struct {
+	*Client
+	session *Session
+}
+
+func (c *Client) init() {
+	c.conn.SetReadDeadline(time.Now().Add(pongWait))
+	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+}
+
+func (c *IOPump) readPump() {
 	defer func() {
 		c.hub.disconnect <- c
 		c.conn.Close()
 	}()
-	c.conn.SetReadDeadline(time.Now().Add(pongWait))
-	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	c.init()
 
 	c.hub.connect <- c
 	for {
 		_, message, err := c.conn.ReadMessage()
-		log.Println("Received from client:", message)
+		log.Printf("Received from %s: %v", c.clientType, message)
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseNoStatusReceived, websocket.CloseNormalClosure) {
 				log.Printf("error: %v", err)
 			}
 			break
 		}
-		c.session.runner.inputBarrier.Wait()
-		c.session.runner.send <- protocol.InputMessage(message)
+		c.runner.inputBarrier.Wait()
+		c.runner.send <- protocol.InputMessage(message)
+	}
+}
+
+func (c *StatusPump) readPump() {
+	defer func() {
+		c.hub.unlisten <- c
+		c.conn.Close()
+	}()
+	c.init()
+
+	c.hub.listen <- c
+	for {
+		_, message, err := c.conn.ReadMessage()
+		log.Printf("Received from %s: %v", c.clientType, message)
+		if err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseNoStatusReceived, websocket.CloseNormalClosure) {
+				log.Printf("error: %v", err)
+			}
+			break
+		}
 	}
 }
 
@@ -60,11 +115,11 @@ func (c *Client) writePump() {
 				return
 			}
 
-			w, err := c.conn.NextWriter(websocket.TextMessage)
+			w, err := c.conn.NextWriter(c.messageType)
 			if err != nil {
 				return
 			}
-			log.Println("Send to client:", message)
+			log.Printf("Send to %s: %v", c.clientType, message)
 			w.Write(message)
 
 			if err := w.Close(); err != nil {
@@ -81,7 +136,7 @@ func (c *Client) writePump() {
 	}
 }
 
-func ServeClient(hub *Hub, w http.ResponseWriter, r *http.Request) {
+func ServeIO(hub *Hub, w http.ResponseWriter, r *http.Request, clientType string) {
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
 	query := r.URL.Query()
@@ -100,7 +155,26 @@ func ServeClient(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
-	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 256), session: session, closing: make(chan bool)}
+	innerClient := &Client{
+		hub:         hub,
+		conn:        conn,
+		send:        make(chan []byte, 256),
+		closing:     make(chan bool),
+		messageType: websocket.TextMessage,
+		clientType:  clientType,
+	}
+	var client IClient
+	if clientType == "io" {
+		client = &IOPump{
+			Client: innerClient,
+			runner: session.runner,
+		}
+	} else if clientType == "status" {
+		client = &StatusPump{
+			Client:  innerClient,
+			session: session,
+		}
+	}
 
 	go client.writePump()
 	go client.readPump()

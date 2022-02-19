@@ -16,8 +16,11 @@ func main() {
 	http.HandleFunc("/endpoint-r", func(w http.ResponseWriter, r *http.Request) {
 		ServeRunner(hub, w, r)
 	})
-	http.HandleFunc("/endpoint-c", func(w http.ResponseWriter, r *http.Request) {
-		ServeClient(hub, w, r)
+	http.HandleFunc("/endpoint-io", func(w http.ResponseWriter, r *http.Request) {
+		ServeIO(hub, w, r, "io")
+	})
+	http.HandleFunc("/endpoint-st", func(w http.ResponseWriter, r *http.Request) {
+		ServeIO(hub, w, r, "status")
 	})
 	http.HandleFunc("/session", func(w http.ResponseWriter, r *http.Request) {
 		createSession(hub, w, r)

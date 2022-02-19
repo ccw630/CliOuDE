@@ -9,3 +9,7 @@ const (
 	Ok
 	RuntimeError
 )
+
+var statuses = [5]string{
+	"Running", "Preparing", "Prepare Error", "Ok", "Runtime Error",
+}

@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -33,13 +34,15 @@ func mockRunner(t *testing.T, runnerReady *sync.WaitGroup) {
 		t.Fatal("Runner read message fail:", err)
 	}
 	c.WriteMessage(websocket.BinaryMessage, protocol.OutputMessage(message))
+	c.WriteMessage(websocket.BinaryMessage, protocol.StatusMessage(protocol.Ok))
+	c.WriteMessage(websocket.BinaryMessage, protocol.ExitMessage(0))
 	c.WriteMessage(websocket.CloseMessage, nil)
 }
 
-func mockClient(t *testing.T, runnerReady *sync.WaitGroup) {
+func createSessionForTest(t *testing.T, runnerReady *sync.WaitGroup) *SessionResponse {
 	var sessionReq = []byte(`{
 		"language": "echo",
-		"script": "wait 0.5s at prepare"
+		"code": "wait 0.5s at prepare"
 	}`)
 	request, err := http.NewRequest("POST", "http://localhost:8080/session", bytes.NewBuffer(sessionReq))
 	request.Header.Set("Content-Type", "application/json")
@@ -53,6 +56,7 @@ func mockClient(t *testing.T, runnerReady *sync.WaitGroup) {
 	if err != nil {
 		t.Fatal("POST Session fail:", err)
 	}
+	defer response.Body.Close()
 
 	if response.Status != "200 OK" {
 		t.Fatal("When creating session, runner assign failed!")
@@ -62,9 +66,11 @@ func mockClient(t *testing.T, runnerReady *sync.WaitGroup) {
 	if err := json.Unmarshal(body, &sessionRes); err != nil {
 		t.Fatal("Session response got, but unmarshal failed")
 	}
-	response.Body.Close()
+	return &sessionRes
+}
 
-	u := url.URL{Scheme: "ws", Host: "localhost:8080", Path: "/endpoint-c", RawQuery: "session_id=" + sessionRes.SessionId}
+func mockIOPump(t *testing.T, sessionRes *SessionResponse) {
+	u := url.URL{Scheme: "ws", Host: "localhost:8080", Path: "/endpoint-io", RawQuery: "session_id=" + sessionRes.SessionId}
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
 		t.Fatal("Client dial:", err)
@@ -83,23 +89,52 @@ func mockClient(t *testing.T, runnerReady *sync.WaitGroup) {
 	c.WriteMessage(websocket.CloseMessage, nil)
 }
 
+func mockStatusPump(t *testing.T, sessionRes *SessionResponse) {
+	u := url.URL{Scheme: "ws", Host: "localhost:8080", Path: "/endpoint-st", RawQuery: "session_id=" + sessionRes.SessionId}
+	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	if err != nil {
+		t.Fatal("Client dial:", err)
+	}
+	defer c.Close()
+	for {
+		_, message, err := c.ReadMessage()
+		if err != nil {
+			t.Fatal("Client read message fail:", err)
+		}
+		t.Logf("status %s", message)
+		if strings.Contains(string(message), "exit") {
+			break
+		}
+	}
+	c.WriteMessage(websocket.CloseMessage, nil)
+}
+
 func TestMain(t *testing.T) {
 	var barrier sync.WaitGroup
 	var runnerReady sync.WaitGroup
-	barrier.Add(2)
+	barrier.Add(3)
 	runnerReady.Add(1)
 	go func() {
 		main()
 		barrier.Done()
 	}()
 	go func() {
+		t.Log("Runner start")
 		mockRunner(t, &runnerReady)
 		t.Log("Runner done")
 		barrier.Done()
 	}()
+	sessionRes := createSessionForTest(t, &runnerReady)
 	go func() {
-		mockClient(t, &runnerReady)
-		t.Log("Client done")
+		t.Log("Status start")
+		mockStatusPump(t, sessionRes)
+		t.Log("Status done")
+		barrier.Done()
+	}()
+	go func() {
+		t.Log("IO start")
+		mockIOPump(t, sessionRes)
+		t.Log("IO done")
 		barrier.Done()
 	}()
 	barrier.Wait()

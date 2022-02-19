@@ -158,7 +158,14 @@ impl Run {
                             .send(Message::binary([output.stderr, vec![0xe2]].concat()))
                             .await?;
                         ws_writer
-                            .send(Message::binary(vec![RunStatus::PrepareError as u8, 0xe8]))
+                            .send(Message::binary(vec![RunStatus::PrepareError as u8, 0xe7]))
+                            .await?;
+                        ws_writer
+                            .send(Message::binary(vec![
+                                match output.status.code() {
+                                Some(code) => code,
+                                None => 9,
+                            } as u8, 0xe8]))
                             .await?;
                         return Ok(ExitStatus::PrepareError);
                     }

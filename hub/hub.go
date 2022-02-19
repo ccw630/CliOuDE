@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 
+	"github.com/ccw630/clioude/hub/protocol"
 	"github.com/google/uuid"
 )
 
@@ -21,11 +22,17 @@ type Hub struct {
 	// Unregister requests from runners.
 	unregister chan *Runner
 
-	// Connect requests from clients.
-	connect chan *Client
+	// Connect requests from IO pumps.
+	connect chan *IOPump
 
-	// Disconnect requests from clients.
-	disconnect chan *Client
+	// Disconnect requests from IO pumps.
+	disconnect chan *IOPump
+
+	// Listen requests from status pumps.
+	listen chan *StatusPump
+
+	// Unlisten requests from status pumps.
+	unlisten chan *StatusPump
 }
 
 func NewHub() *Hub {
@@ -33,8 +40,10 @@ func NewHub() *Hub {
 		sessions:   make(map[string]*Session),
 		register:   make(chan *Runner),
 		unregister: make(chan *Runner),
-		connect:    make(chan *Client),
-		disconnect: make(chan *Client),
+		connect:    make(chan *IOPump),
+		disconnect: make(chan *IOPump),
+		listen:     make(chan *StatusPump),
+		unlisten:   make(chan *StatusPump),
 		runners:    make(map[*Runner]bool),
 	}
 }
@@ -51,26 +60,33 @@ func (h *Hub) Run() {
 			if _, ok := h.runners[runner]; ok {
 				log.Println("Remove runner to hub:", runner.id)
 				if runner.session != nil {
-					if runner.session.client != nil {
-						runner.session.client.closing <- true
+					if runner.session.ioPump != nil {
+						runner.session.ioPump.closing <- true
+					}
+					if runner.session.statusPump != nil {
+						runner.session.statusPump.closing <- true
 					}
 					delete(h.sessions, runner.session.id)
 				}
 				delete(h.runners, runner)
 				close(runner.send)
 			}
-		case client := <-h.connect:
-			session := client.session
+		case ioPump := <-h.connect:
 			select {
-			case buffer := <-session.runner.buffer:
-				client.send <- buffer
+			case buffer := <-ioPump.runner.buffer:
+				ioPump.send <- buffer
 			default:
 			}
-			session.client = client
-		case client := <-h.disconnect:
-			close(client.send)
-			session := client.session
-			session.client = nil
+			ioPump.runner.session.ioPump = ioPump
+		case ioPump := <-h.disconnect:
+			close(ioPump.send)
+			ioPump.runner.session.ioPump = nil
+		case statusPump := <-h.listen:
+			statusPump.session.statusPump = statusPump
+			statusPump.send <- protocol.ParseStatus(byte(statusPump.session.currentStatus))
+		case statusPump := <-h.unlisten:
+			close(statusPump.send)
+			statusPump.session.ioPump = nil
 		}
 	}
 }
