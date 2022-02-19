@@ -3,7 +3,7 @@ let selectLanguageBtn, runBtn, vimCheckBox
 let statusLine, emptyIndicator;
 
 function reset() {
-  // $runBtn.button("reset");
+  runBtn.removeAttribute("disabled");
   if (outputEditor.getValue() == "") {
     emptyIndicator.innerHTML = "暂无"
   } else {
@@ -23,7 +23,7 @@ function createSession() {
     alert("代码不能为空!");
     return;
   } else {
-    // $runBtn.button("loading");
+    runBtn.setAttribute("disabled", "disabled");
   }
 
   let sourceValue = sourceEditor.getValue()
@@ -187,7 +187,7 @@ window.onload = () => {
 
   window.onkeydown = (e) => {
     const keyCode = e.keyCode || e.which;
-    if (keyCode == 120) { // F9
+    if (e.altKey && keyCode === 82) { // ⌥ + R
       e.preventDefault();
       createSession();
     }
