@@ -1,14 +1,11 @@
-let sourceEditor, inputEditor, outputEditor;
+let sourceEditor, inputEditor, outputEditor
 let selectLanguageBtn, runBtn, vimCheckBox
-let statusLine, emptyIndicator;
+let statusLine
+let outputListener
 
 function reset() {
   runBtn.removeAttribute("disabled");
-  if (outputEditor.getValue() == "") {
-    emptyIndicator.innerHTML = "暂无"
-  } else {
-    emptyIndicator.innerHTML = ""
-  }
+  outputListener.dispose()
 }
 
 function toggleVim() {
@@ -60,11 +57,16 @@ function createSession() {
     }
     const sessionId = result.session_id
     const io = new WebSocket(`ws://localhost:8080/endpoint-io?session_id=${sessionId}`)
-    outputEditor.setValue("")
+    outputEditor.write('\x1b[H\x1b[2J') // clear terminal
     io.onopen =  () => {
       if (!!inputValue) {
         io.send(inputValue)
       }
+      outputListener = outputEditor.onData(data => {
+        data = data.replaceAll("\r", "\n")
+        outputEditor.write(data)
+        io.send(data)
+      })
     }
     io.onmessage = (e) => {
       appendOutput(e.data)
@@ -95,7 +97,7 @@ function createSession() {
 }
 
 function appendOutput(output) {
-  outputEditor.replaceRange(output, CodeMirror.Pos(outputEditor.lastLine()))
+  outputEditor.write(output)
 }
 
 function setEditorMode() {
@@ -124,7 +126,6 @@ function initializeElements() {
   selectLanguageBtn = document.getElementById("selectLanguageBtn")
   runBtn = document.getElementById("runBtn")
   vimCheckBox = document.getElementById("vimCheckBox")
-  emptyIndicator = document.getElementById("emptyIndicator")
   statusLine = document.getElementById("statusLine")
 }
 
@@ -166,10 +167,14 @@ window.onload = () => {
     lineNumbers: true,
     mode: "plain"
   })
-  outputEditor = CodeMirror(document.getElementById("outputEditor"), {
-    readOnly: true,
-    mode: "plain"
+
+  outputEditor = new Terminal({
+    convertEol: true,
+    theme : { background: "#f8f8f8", foreground: "#000000", cursor: "#000000" },
+    cursorBlink: true,
+    cursorStyle: 'bar'
   })
+  outputEditor.open(document.getElementById('outputEditor'));
 
   if (localStorageGetItem("keyMap") == "vim") {
     vimCheckBox.checked = true
