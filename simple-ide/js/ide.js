@@ -15,6 +15,10 @@ function toggleVim() {
   focusAndSetCursorAtTheEnd();
 }
 
+function saveCode() {
+  localStorageSetItem("codeContent", sourceEditor.getValue())
+}
+
 function createSession() {
   if (sourceEditor.getValue().trim() == "") {
     alert("代码不能为空!");
@@ -119,7 +123,9 @@ function insertTemplate() {
 function loadDefaultLanguage() {
   selectLanguageBtn.selectedIndex = 0 // C++
   setEditorMode();
-  insertTemplate();
+  if (sourceEditor.getValue() === "") {
+    insertTemplate();
+  }
 }
 
 function initializeElements() {
@@ -154,6 +160,7 @@ window.onload = () => {
     showCursorWhenSelecting: true,
     matchBrackets: true,
     autoCloseBrackets: true,
+    value: localStorageGetItem("codeContent") || '',
     keyMap: localStorageGetItem("keyMap") || "default",
     extraKeys: {
       "Tab": function(cm) {
@@ -170,9 +177,9 @@ window.onload = () => {
 
   outputEditor = new Terminal({
     convertEol: true,
-    theme : { background: "#f8f8f8", foreground: "#000000", cursor: "#000000" },
-    cursorBlink: true,
-    cursorStyle: 'bar'
+    theme: { background: "#f8f8f8", foreground: "#000000", selection: "#001528", cursor: "#000000" },
+    fontSize: 16,
+    lineHeight: 1.375,
   })
   outputEditor.open(document.getElementById('outputEditor'));
 
@@ -200,7 +207,7 @@ window.onload = () => {
 
   runBtn.onclick = createSession
 
-  CodeMirror.commands.save = function(){}
+  CodeMirror.commands.save = saveCode
 
   vimCheckBox.onchange = toggleVim
 }
