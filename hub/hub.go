@@ -76,7 +76,8 @@ func (h *Hub) Run() {
 					if runner.session.statusPump != nil {
 						runner.session.statusPump.closing <- true
 					}
-					delete(h.sessions, runner.session.id)
+					// TODO persist session
+					// delete(h.sessions, runner.session.id)
 				}
 				delete(h.runners, runner)
 				close(runner.send)
@@ -96,7 +97,7 @@ func (h *Hub) Run() {
 			ioPump.runner.session.ioPump = nil
 		case statusPump := <-h.listen:
 			statusPump.session.statusPump = statusPump
-			statusPump.send <- protocol.ParseStatus(byte(statusPump.session.currentStatus))
+			statusPump.send <- protocol.ParseStatus(byte(statusPump.session.CurrentStatus))
 		case statusPump := <-h.unlisten:
 			close(statusPump.send)
 			statusPump.session.ioPump = nil

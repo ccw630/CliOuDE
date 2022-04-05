@@ -23,7 +23,7 @@ func main() {
 		ServeClient(hub, w, r, "status")
 	})
 	http.HandleFunc("/session", func(w http.ResponseWriter, r *http.Request) {
-		createSession(hub, w, r)
+		handleSession(hub, w, r)
 	})
 	http.HandleFunc("/language", func(w http.ResponseWriter, r *http.Request) {
 		getLanguages(hub, w, r)

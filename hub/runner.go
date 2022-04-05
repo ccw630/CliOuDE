@@ -25,6 +25,13 @@ type RunnerConf struct {
 	AvailableLanguages map[string]string `json:"available_languages"`
 }
 
+func max(x, y uint64) uint64 {
+	if x > y {
+		return x
+	}
+	return y
+}
+
 // readPump pumps messages from the websocket connection to the hub.
 //
 // The application runs readPump in a per-connection goroutine. The application
@@ -66,14 +73,20 @@ func (r *Runner) readPump() {
 				r.inputBarrier.Done()
 			}
 			status := message[0]
-			r.session.currentStatus = protocol.RunStatus(status)
+			r.session.CurrentStatus = protocol.RunStatus(status)
 			if r.session.statusPump != nil {
 				r.session.statusPump.send <- protocol.ParseStatus(status)
 			}
 		} else if flag == protocol.UsageInfo {
 			// usage metrics
+			usage := protocol.ParseUsage(message)
+			log.Println("Received usage info:", usage)
+			r.session.CpuTimesEstimate += float64(r.conf.CpuFrequency) * float64(r.session.lastCpuPercent+usage.CpuPercent) * (usage.Time - r.session.TimeElapsed) / 200
+			r.session.TimeElapsed = usage.Time
+			r.session.MemoryMaxUsed = max(r.session.MemoryMaxUsed, usage.Memory)
+			r.session.lastCpuPercent = usage.CpuPercent
 		} else if flag == protocol.ExitInfo {
-			r.session.exitCode = message[0]
+			r.session.ExitCode = message[0]
 			if r.session.statusPump != nil {
 				r.session.statusPump.send <- protocol.ParseExitCode(message)
 			}

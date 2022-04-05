@@ -1,8 +1,12 @@
 package protocol
 
-import "encoding/json"
+import (
+	"encoding/binary"
+	"encoding/json"
+	"math"
+)
 
-type statusMessage struct {
+type StatusMessage struct {
 	Type string      `json:"type"`
 	Desc interface{} `json:"desc"`
 }
@@ -12,13 +16,21 @@ func ParseMessage(message []byte) (ControlFlag, []byte) {
 }
 
 func ParseStatus(status byte) []byte {
-	res, _ := json.Marshal(statusMessage{Type: "status", Desc: statuses[status]})
+	res, _ := json.Marshal(StatusMessage{Type: "status", Desc: statuses[status]})
 	return res
 }
 
 func ParseExitCode(exitInfo []byte) []byte {
-	res, _ := json.Marshal(statusMessage{Type: "exit", Desc: exitInfo[0]})
+	res, _ := json.Marshal(StatusMessage{Type: "exit", Desc: exitInfo[0]})
 	return res
+}
+
+func ParseUsage(usage []byte) Usage {
+	return Usage{
+		Time:       math.Float64frombits(binary.BigEndian.Uint64(usage[0:8])),
+		CpuPercent: math.Float32frombits(binary.BigEndian.Uint32(usage[8:12])),
+		Memory:     binary.BigEndian.Uint64(usage[12:20]),
+	}
 }
 
 func InputMessage(input []byte) []byte {
@@ -38,7 +50,7 @@ func CodeMessage(code string) []byte {
 	return append([]byte(code), Code)
 }
 
-func StatusMessage(status RunStatus) []byte {
+func RunStatusMessage(status RunStatus) []byte {
 	return []byte{byte(status), StatusInfo}
 }
 

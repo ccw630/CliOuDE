@@ -10,7 +10,7 @@ import (
 )
 
 type Session struct {
-	id string
+	Id string `json:"id"`
 
 	ioPump *IOPump
 
@@ -18,9 +18,12 @@ type Session struct {
 
 	runner *Runner
 
-	currentStatus protocol.RunStatus
-
-	exitCode byte
+	CurrentStatus    protocol.RunStatus `json:"current_status"`
+	ExitCode         byte               `json:"exit_code"`
+	TimeElapsed      float64            `json:"time_elapsed"`
+	CpuTimesEstimate float64            `json:"cpu_times_estimate"`
+	MemoryMaxUsed    uint64             `json:"memory_max_used"`
+	lastCpuPercent   float32
 }
 
 type SessionRequest struct {
@@ -32,13 +35,30 @@ type SessionResponse struct {
 	SessionId string `json:"session_id"`
 }
 
-func createSession(hub *Hub, w http.ResponseWriter, r *http.Request) {
+func handleSession(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Headers", "*")
 
 	if r.Method == "OPTIONS" {
 		w.WriteHeader(200)
+		return
+	}
+
+	if r.Method == "GET" {
+		query := r.URL.Query()
+		sessionId := query.Get("id")
+
+		session := hub.sessions[sessionId]
+		if session == nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(400)
+			fmt.Fprintf(w, "Invalid session ID")
+			return
+		}
+
+		w.WriteHeader(200)
+		json.NewEncoder(w).Encode(session)
 		return
 	}
 
@@ -70,8 +90,10 @@ func createSession(hub *Hub, w http.ResponseWriter, r *http.Request) {
 
 			id := uuid.New().String()
 			session := &Session{
-				id:     id,
-				runner: runner,
+				Id:               id,
+				runner:           runner,
+				ExitCode:         255,
+				CpuTimesEstimate: 0,
 			}
 
 			hub.sessions[id] = session

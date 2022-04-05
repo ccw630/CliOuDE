@@ -26,15 +26,15 @@ func mockRunner(t *testing.T, runnerReady *sync.WaitGroup) {
 	runnerReady.Done()
 	c.ReadMessage() // id&language
 	c.ReadMessage() // code
-	c.WriteMessage(websocket.BinaryMessage, protocol.StatusMessage(protocol.Preparing))
+	c.WriteMessage(websocket.BinaryMessage, protocol.RunStatusMessage(protocol.Preparing))
 	time.Sleep(500 * time.Millisecond)
-	c.WriteMessage(websocket.BinaryMessage, protocol.StatusMessage(protocol.Running))
+	c.WriteMessage(websocket.BinaryMessage, protocol.RunStatusMessage(protocol.Running))
 	_, message, err := c.ReadMessage()
 	if err != nil {
 		t.Fatal("Runner read message fail:", err)
 	}
 	c.WriteMessage(websocket.BinaryMessage, protocol.OutputMessage(message))
-	c.WriteMessage(websocket.BinaryMessage, protocol.StatusMessage(protocol.Ok))
+	c.WriteMessage(websocket.BinaryMessage, protocol.RunStatusMessage(protocol.Ok))
 	c.WriteMessage(websocket.BinaryMessage, protocol.ExitMessage(0))
 	c.WriteMessage(websocket.CloseMessage, nil)
 }

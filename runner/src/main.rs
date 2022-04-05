@@ -176,6 +176,7 @@ impl Run {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()?;
+        let now = SystemTime::now();
         self.pid = process.id();
         let mut stdin = process
             .stdin
@@ -200,8 +201,9 @@ impl Run {
         tokio::spawn(pipe(stderr, stderr_tx, 0xe2));
         let pid = self.pid.unwrap() as i32;
         tokio::spawn(async move {
-            let now = SystemTime::now();
+            let mut times = 0;
             while sys.refresh_process(pid) {
+                times += 1;
                 if let Some(process) = sys.get_process(pid) {
                     loop_tx
                         .unbounded_send(
@@ -219,11 +221,10 @@ impl Run {
                             .concat(),
                         )
                         .unwrap();
-                    sleep(Duration::from_millis(200)).await;
+                    sleep(Duration::from_millis(if times > 100 { 200 } else { 20 })).await;
                 } else {
                     break;
                 }
-                break;
             }
         });
         tokio::spawn(async move {
@@ -231,6 +232,22 @@ impl Run {
                 .wait()
                 .await
                 .expect("child process encountered an error");
+            ws_tx
+                .unbounded_send(
+                    [
+                        now.elapsed()
+                            .unwrap()
+                            .as_secs_f64()
+                            .to_bits()
+                            .to_be_bytes()
+                            .to_vec(),
+                        0f32.to_bits().to_be_bytes().to_vec(),
+                        0u64.to_be_bytes().to_vec(),
+                        vec![0xe6],
+                    ]
+                    .concat(),
+                )
+                .unwrap();
             ws_tx
                 .unbounded_send(vec![
                     if status.success() {

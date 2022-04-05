@@ -73,7 +73,24 @@ function getLanguages() {
       loadDefaultLanguage(index || cppIndex || 0, sourceEditor.getValue() === "" || !index)
     })
     .catch(error => {
-      alert('Connection refused')
+      alert('Get language failed')
+      console.error(error)
+    })
+}
+
+function getSession(id) {
+  const requestOptions = {
+    method: 'GET',
+    redirect: 'follow',
+  }
+
+  fetch(`http://localhost:8080/session?id=${id}`, requestOptions)
+    .then(response => response.json())
+    .then(result => {
+      statusLine.innerHTML = `${result.time_elapsed.toFixed(2)}s, est. ${Math.ceil(result.cpu_times_estimate)} CPU times, ${result.memory_max_used} kB, ${statusLine.innerHTML}`
+    })
+    .catch(error => {
+      alert('Get session failed')
       console.error(error)
     })
 }
@@ -136,9 +153,8 @@ function createSession() {
         appendOutput(e.data)
       }
       io.onclose = () => {
-        statusLine.innerHTML = 'OK'
-        reset()
         console.log("It took " + (performance.now() - timeStart) + " ms to get submission result.");
+        reset()
       }
 
       const st = new WebSocket(`ws://localhost:8080/endpoint-st?session_id=${sessionId}`)
@@ -149,7 +165,9 @@ function createSession() {
         } else if (data.type === 'exit') {
           appendOutput(`\n[INFO] Exited with code ${data.desc}.`)
         }
-
+      }
+      st.onclose = () => {
+        getSession(sessionId)
       }
 
     })
