@@ -10,7 +10,7 @@
    1. RunID(16 bytes) + Language
    2. Code content, write to directory `run/<RunID>/`
    3. If needed, compile the code in subprocess
-4. Report compiling/running
+4. Report preparing/running
 5. Run as subprocess with interactive stdio
 6. Send status info
    * Time/CPU/Memory usage(f64 in s + f32 in percent + u64 in KB)

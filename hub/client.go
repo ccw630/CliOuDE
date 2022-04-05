@@ -136,7 +136,7 @@ func (c *Client) writePump() {
 	}
 }
 
-func ServeIO(hub *Hub, w http.ResponseWriter, r *http.Request, clientType string) {
+func ServeClient(hub *Hub, w http.ResponseWriter, r *http.Request, clientType string) {
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
 	query := r.URL.Query()

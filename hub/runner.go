@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"sync"
@@ -14,8 +15,14 @@ type Runner struct {
 	session      *Session
 	buffer       chan []byte
 	id           string
-	conf         string
+	conf         *RunnerConf
 	inputBarrier sync.WaitGroup
+}
+
+type RunnerConf struct {
+	CpuFrequency       uint64            `json:"cpu_freq"`
+	TotalMemory        uint64            `json:"total_memory"`
+	AvailableLanguages map[string]string `json:"available_languages"`
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -37,7 +44,11 @@ func (r *Runner) readPump() {
 		}
 		return
 	}
-	r.conf = string(message)
+	if err := json.Unmarshal(message, &r.conf); err != nil {
+		log.Printf("error on unmarshaling runner conf: %v", err)
+		return
+	}
+	log.Println("Received runner config:", r.conf)
 	r.hub.register <- r
 	r.inputBarrier.Add(1)
 	for {

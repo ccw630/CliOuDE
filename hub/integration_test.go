@@ -22,7 +22,7 @@ func mockRunner(t *testing.T, runnerReady *sync.WaitGroup) {
 		t.Fatal("Runner dial:", err)
 	}
 	defer c.Close()
-	c.WriteMessage(websocket.BinaryMessage, []byte("{}"))
+	c.WriteMessage(websocket.BinaryMessage, []byte("{\"available_languages\": {\"echo\":\"\"}}"))
 	runnerReady.Done()
 	c.ReadMessage() // id&language
 	c.ReadMessage() // code

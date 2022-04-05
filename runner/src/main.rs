@@ -109,10 +109,7 @@ impl Run {
                 }
                 Some(0xc1u8) => {
                     let lang = match language {
-                        Some(lang) => self
-                            ._language_conf
-                            .get(&lang.to_lowercase())
-                            .expect("No such language"),
+                        Some(lang) => self._language_conf.get(&lang).expect("No such language"),
                         None => panic!("No language received"),
                     };
                     let path = format!("run/{}", self.id);
@@ -163,9 +160,11 @@ impl Run {
                         ws_writer
                             .send(Message::binary(vec![
                                 match output.status.code() {
-                                Some(code) => code,
-                                None => 9,
-                            } as u8, 0xe8]))
+                                    Some(code) => code,
+                                    None => 9,
+                                } as u8,
+                                0xe8,
+                            ]))
                             .await?;
                         return Ok(ExitStatus::PrepareError);
                     }
@@ -428,7 +427,9 @@ mod tests {
         let (mut write, mut read) = ws_stream.split();
         read.next().await;
         write
-            .send(Message::binary(b"00000000-0000-0000-0000-000000000001C++\xc0".as_ref()))
+            .send(Message::binary(
+                b"00000000-0000-0000-0000-000000000001C++\xc0".as_ref(),
+            ))
             .await?;
         write.send(Message::binary(b"#include<iostream>\nusing namespace std;int main(){int n;cin>>n;cout<<n+1<<endl;cerr<<n+2<<endl;}\n\xc1".as_ref())).await?;
         assert_eq!(
@@ -455,7 +456,9 @@ mod tests {
         let (mut write, mut read) = ws_stream.split();
         read.next().await;
         write
-            .send(Message::binary(b"00000000-0000-0000-0000-000000000002C++\xc0".as_ref()))
+            .send(Message::binary(
+                b"00000000-0000-0000-0000-000000000002C++\xc0".as_ref(),
+            ))
             .await?;
         write
             .send(Message::binary(
@@ -480,7 +483,9 @@ mod tests {
         let (mut write, mut read) = ws_stream.split();
         read.next().await;
         write
-            .send(Message::binary(b"00000000-0000-0000-0000-000000000003C++\xc0".as_ref()))
+            .send(Message::binary(
+                b"00000000-0000-0000-0000-000000000003C++\xc0".as_ref(),
+            ))
             .await?;
         write
             .send(Message::binary(
@@ -497,7 +502,9 @@ mod tests {
         let (mut write, mut read) = ws_stream.split();
         read.next().await;
         write
-            .send(Message::binary(b"00000000-0000-0000-0000-000000000004C++\xc0".as_ref()))
+            .send(Message::binary(
+                b"00000000-0000-0000-0000-000000000004C++\xc0".as_ref(),
+            ))
             .await?;
         write
             .send(Message::binary(
@@ -520,7 +527,9 @@ mod tests {
         let (mut write, mut read) = ws_stream.split();
         read.next().await;
         write
-            .send(Message::binary(b"00000000-0000-0000-0000-000000000005C++\xc0".as_ref()))
+            .send(Message::binary(
+                b"00000000-0000-0000-0000-000000000005C++\xc0".as_ref(),
+            ))
             .await?;
         sleep(Duration::from_millis(1000)).await;
         write.close().await?;

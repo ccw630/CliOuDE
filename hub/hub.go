@@ -16,6 +16,9 @@ type Hub struct {
 	// Registered runners.
 	runners map[*Runner]bool
 
+	// Map language to runners
+	languagedRunners map[string]map[*Runner]bool
+
 	// Register requests from the runners.
 	register chan *Runner
 
@@ -37,14 +40,15 @@ type Hub struct {
 
 func NewHub() *Hub {
 	return &Hub{
-		sessions:   make(map[string]*Session),
-		register:   make(chan *Runner),
-		unregister: make(chan *Runner),
-		connect:    make(chan *IOPump),
-		disconnect: make(chan *IOPump),
-		listen:     make(chan *StatusPump),
-		unlisten:   make(chan *StatusPump),
-		runners:    make(map[*Runner]bool),
+		sessions:         make(map[string]*Session),
+		register:         make(chan *Runner),
+		unregister:       make(chan *Runner),
+		connect:          make(chan *IOPump),
+		disconnect:       make(chan *IOPump),
+		listen:           make(chan *StatusPump),
+		unlisten:         make(chan *StatusPump),
+		runners:          make(map[*Runner]bool),
+		languagedRunners: make(map[string]map[*Runner]bool),
 	}
 }
 
@@ -55,6 +59,12 @@ func (h *Hub) Run() {
 			id := uuid.New().String()
 			runner.id = id
 			h.runners[runner] = true
+			for language := range runner.conf.AvailableLanguages {
+				if _, ok := h.languagedRunners[language]; !ok {
+					h.languagedRunners[language] = make(map[*Runner]bool)
+				}
+				h.languagedRunners[language][runner] = true
+			}
 			log.Println("Add runner to hub:", runner.id)
 		case runner := <-h.unregister:
 			if _, ok := h.runners[runner]; ok {
@@ -70,6 +80,9 @@ func (h *Hub) Run() {
 				}
 				delete(h.runners, runner)
 				close(runner.send)
+				for language := range runner.conf.AvailableLanguages {
+					delete(h.languagedRunners[language], runner)
+				}
 			}
 		case ioPump := <-h.connect:
 			select {

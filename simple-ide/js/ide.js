@@ -4,8 +4,11 @@ let statusLine
 let outputListener
 
 function reset() {
-  runBtn.removeAttribute("disabled");
-  outputListener.dispose()
+  runBtn.removeAttribute("disabled")
+  if (outputListener) {
+    outputListener.dispose()
+    outputListener = null
+  }
 }
 
 function toggleVim() {
@@ -16,7 +19,63 @@ function toggleVim() {
 }
 
 function saveCode() {
+  localStorageSetItem("language", getSelectedLanguage())
   localStorageSetItem("codeContent", sourceEditor.getValue())
+}
+
+const modeMap = {
+  "C++": "text/x-c++src",
+  "JavaScript": "text/javascript",
+  "Java": "text/x-java",
+  "Python": "text/x-python",
+  "Kotlin": "text/x-kotlin",
+  "Scala": "text/x-scala",
+}
+
+function getSelectedLanguage() {
+  return selectLanguageBtn.selectedOptions[0].value
+}
+
+function getLanguageMode(language) {
+  for (let i in modeMap) {
+    if (language.toLowerCase().includes(i.toLowerCase())) {
+      return modeMap[i];
+    }
+  }
+  return "text/x-csrc"
+}
+
+function getLanguages() {
+  const requestOptions = {
+    method: 'GET',
+    redirect: 'follow',
+  }
+
+  fetch("http://localhost:8080/language", requestOptions)
+    .then(response => response.json())
+    .then(languages => {
+      let index, cppIndex
+      let defaultLanguage = localStorageGetItem("language")
+      for (let i in languages) {
+        let language = languages[i]
+        const option = document.createElement("option")
+        option.value = language
+        option.innerText = language
+        option.setAttribute("mode", getLanguageMode(language))
+        selectLanguageBtn.appendChild(option)
+        if (language === defaultLanguage) {
+          index = i
+        }
+        if (language === "C++") {
+          cppIndex = i
+        }
+      }
+      loadDefaultLanguage(index || cppIndex || 0, sourceEditor.getValue() === "" || !index)
+    })
+    .catch(error => {
+      alert('Connection refused')
+      console.error(error)
+    })
 }
 
 function createSession() {
@@ -24,12 +83,13 @@ function createSession() {
     alert("代码不能为空!");
     return;
   } else {
+    saveCode()
     runBtn.setAttribute("disabled", "disabled");
   }
 
   let sourceValue = sourceEditor.getValue()
   let inputValue = inputEditor.getValue()
-  let language = selectLanguageBtn.selectedOptions[0].value
+  let language = getSelectedLanguage()
   const sessionReq = {
     code: sourceValue,
     language: language
@@ -47,57 +107,57 @@ function createSession() {
   const timeStart = performance.now();
 
   fetch("http://localhost:8080/session", requestOptions)
-  .then(response => {
-    if (response.status !== 200) {
-      return response.text()
-    }
-    return response.json()
-  })
-  .then(result => {
-    if (!result.session_id) {
-      alert(result)
-      reset()
-      return
-    }
-    const sessionId = result.session_id
-    const io = new WebSocket(`ws://localhost:8080/endpoint-io?session_id=${sessionId}`)
-    outputEditor.write('\x1b[H\x1b[2J') // clear terminal
-    io.onopen =  () => {
-      if (!!inputValue) {
-        io.send(inputValue)
+    .then(response => {
+      if (response.status !== 200) {
+        return response.text()
       }
-      outputListener = outputEditor.onData(data => {
-        data = data.replaceAll("\r", "\n")
-        outputEditor.write(data)
-        io.send(data)
-      })
-    }
-    io.onmessage = (e) => {
-      appendOutput(e.data)
-    }
-    io.onclose = () => {
-      statusLine.innerHTML = 'OK'
-      reset()
-      console.log("It took " + (performance.now() - timeStart) + " ms to get submission result.");
-    }
-
-    const st = new WebSocket(`ws://localhost:8080/endpoint-st?session_id=${sessionId}`)
-    st.onmessage = (e) => {
-      data = JSON.parse(e.data)
-      if (data.type === 'status') {
-        statusLine.innerHTML = data.desc
-      } else if (data.type === 'exit') {
-        appendOutput(`\n[INFO] Exited with code ${data.desc}.`)
+      return response.json()
+    })
+    .then(result => {
+      if (!result.session_id) {
+        alert(result)
+        reset()
+        return
+      }
+      const sessionId = result.session_id
+      const io = new WebSocket(`ws://localhost:8080/endpoint-io?session_id=${sessionId}`)
+      outputEditor.write('\x1b[H\x1b[2J') // clear terminal
+      io.onopen = () => {
+        if (!!inputValue) {
+          io.send(inputValue)
+        }
+        outputListener = outputEditor.onData(data => {
+          data = data.replaceAll("\r", "\n")
+          outputEditor.write(data)
+          io.send(data)
+        })
+      }
+      io.onmessage = (e) => {
+        appendOutput(e.data)
+      }
+      io.onclose = () => {
+        statusLine.innerHTML = 'OK'
+        reset()
+        console.log("It took " + (performance.now() - timeStart) + " ms to get submission result.");
       }
 
-    }
+      const st = new WebSocket(`ws://localhost:8080/endpoint-st?session_id=${sessionId}`)
+      st.onmessage = (e) => {
+        data = JSON.parse(e.data)
+        if (data.type === 'status') {
+          statusLine.innerHTML = data.desc
+        } else if (data.type === 'exit') {
+          appendOutput(`\n[INFO] Exited with code ${data.desc}.`)
+        }
 
-  })
-  .catch(error => {
-    reset()
-    alert('Connection refused')
-    console.error(error)
-  })
+      }
+
+    })
+    .catch(error => {
+      reset()
+      alert('Connection refused')
+      console.error(error)
+    })
 }
 
 function appendOutput(output) {
@@ -114,16 +174,15 @@ function focusAndSetCursorAtTheEnd() {
 }
 
 function insertTemplate() {
-  const value = selectLanguageBtn.selectedOptions[0].value
-  sourceEditor.setValue(sources[value])
+  sourceEditor.setValue(sources[getSelectedLanguage()])
   focusAndSetCursorAtTheEnd();
   sourceEditor.markClean();
 }
 
-function loadDefaultLanguage() {
-  selectLanguageBtn.selectedIndex = 0 // C++
+function loadDefaultLanguage(index, needInsertTemplate) {
+  selectLanguageBtn.selectedIndex = index
   setEditorMode();
-  if (sourceEditor.getValue() === "") {
+  if (needInsertTemplate) {
     insertTemplate();
   }
 }
@@ -163,7 +222,7 @@ window.onload = () => {
     value: localStorageGetItem("codeContent") || '',
     keyMap: localStorageGetItem("keyMap") || "default",
     extraKeys: {
-      "Tab": function(cm) {
+      "Tab": function (cm) {
         const spaces = Array(cm.getOption("indentUnit") + 1).join(" ");
         cm.replaceSelection(spaces);
       }
@@ -188,7 +247,7 @@ window.onload = () => {
     toggleVim()
   }
 
-  loadDefaultLanguage();
+  getLanguages();
 
   selectLanguageBtn.onchange = () => {
     if (sourceEditor.isClean()) {
@@ -256,8 +315,8 @@ const sources = {
   "C": cSource,
   "C++": cppSource,
   "Java": javaSource,
-  "Python3": python3Source,
-  "Python2": python2Source,
+  "Python 3": python3Source,
+  "Python 2": python2Source,
   "JavaScript": javascriptSource,
   "Kotlin": kotlinSource,
   "Scala": scalaSource
@@ -268,7 +327,7 @@ window.onbeforeunload = (e) => {
 }
 
 function autoFormat() {
-    for (let i=0; i<sourceEditor.lineCount(); i++) {
-    	sourceEditor.indentLine(i);
-    }
+  for (let i = 0; i < sourceEditor.lineCount(); i++) {
+    sourceEditor.indentLine(i);
+  }
 }

@@ -17,13 +17,16 @@ func main() {
 		ServeRunner(hub, w, r)
 	})
 	http.HandleFunc("/endpoint-io", func(w http.ResponseWriter, r *http.Request) {
-		ServeIO(hub, w, r, "io")
+		ServeClient(hub, w, r, "io")
 	})
 	http.HandleFunc("/endpoint-st", func(w http.ResponseWriter, r *http.Request) {
-		ServeIO(hub, w, r, "status")
+		ServeClient(hub, w, r, "status")
 	})
 	http.HandleFunc("/session", func(w http.ResponseWriter, r *http.Request) {
 		createSession(hub, w, r)
+	})
+	http.HandleFunc("/language", func(w http.ResponseWriter, r *http.Request) {
+		getLanguages(hub, w, r)
 	})
 	err := http.ListenAndServe(*addr, nil)
 	if err != nil {
