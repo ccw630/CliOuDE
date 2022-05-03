@@ -8,8 +8,9 @@ const (
 	PrepareError
 	Ok
 	RuntimeError
+	TimedOut
 )
 
-var statuses = [5]string{
-	"Running", "Preparing", "Prepare Error", "Ok", "Runtime Error",
+var statuses = [6]string{
+	"Running", "Preparing", "Prepare Error", "Ok", "Runtime Error", "Timed Out",
 }

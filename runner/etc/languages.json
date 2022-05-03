@@ -3,12 +3,14 @@
         "file": "main.cc",
         "check_command": "g++ -v",
         "prepare_command": "g++ -O2 -w -fmax-errors=3 -std=c++17 main.cc -lm -o ./main",
-        "run_command": "./main"
+        "run_command": "./main",
+        "idle_timeout": 60
     },
     "Python 3" : {
         "file": "main.py",
         "check_command": "python3 -VV",
         "prepare_command": null,
-        "run_command": "python3 main.py"
+        "run_command": "python3 main.py",
+        "idle_timeout": 60
     }
 }
