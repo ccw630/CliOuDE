@@ -14,7 +14,7 @@
 5. Run as subprocess with interactive stdio
 6. Send status info
    * Time/CPU/Memory usage(f64 in s + f32 in percent + u64 in KB, big endian)
-   * Ok/CE/RE at done
+   * Ok/Prepare Error/Runtime Error/Timed out at done
    * Exit code at exit
 ## Protocol
 
