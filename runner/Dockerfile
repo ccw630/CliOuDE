@@ -1,11 +1,11 @@
-FROM rust:1.59-alpine
+FROM rust:1.59-buster
 
 ADD . /src
 WORKDIR /src
 
 RUN cargo build --release
 
-FROM alpine
-COPY --from=0 /src/runner/target/release/clioude-runner /usr/bin/clioude-runner
+FROM ccw630/clioude-kernel
+COPY --from=0 /src/target/release/clioude-runner /usr/bin/clioude-runner
 
 ENTRYPOINT /usr/bin/clioude-runner
