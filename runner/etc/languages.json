@@ -12,5 +12,12 @@
         "prepare_command": null,
         "run_command": "python3 main.py",
         "idle_timeout": 60
+    },
+    "Java": {
+        "file": "Main.java",
+        "check_command": "java -version",
+        "prepare_command": "javac Main.java",
+        "run_command": "java Main",
+        "idle_timeout": 60
     }
 }

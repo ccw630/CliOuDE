@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
@@ -68,10 +67,10 @@ func (c *IOPump) readPump() {
 	c.hub.connect <- c
 	for {
 		_, message, err := c.conn.ReadMessage()
-		log.Printf("Received from %s: %v", c.clientType, message)
+		sugar.Debugf("Received from %s: %v", c.clientType, message)
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseNoStatusReceived, websocket.CloseNormalClosure) {
-				log.Printf("error: %v", err)
+				sugar.Warnf("error: %v", err)
 			}
 			break
 		}
@@ -90,10 +89,10 @@ func (c *StatusPump) readPump() {
 	c.hub.listen <- c
 	for {
 		_, message, err := c.conn.ReadMessage()
-		log.Printf("Received from %s: %v", c.clientType, message)
+		sugar.Debugf("Received from %s: %v", c.clientType, message)
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseNoStatusReceived, websocket.CloseNormalClosure) {
-				log.Printf("error: %v", err)
+				sugar.Warnf("error: %v", err)
 			}
 			break
 		}
@@ -119,7 +118,7 @@ func (c *Client) writePump() {
 			if err != nil {
 				return
 			}
-			log.Printf("Send to %s: %v", c.clientType, message)
+			sugar.Debugf("Send to %s: %v", c.clientType, message)
 			w.Write(message)
 
 			if err := w.Close(); err != nil {
@@ -152,7 +151,7 @@ func ServeClient(hub *Hub, w http.ResponseWriter, r *http.Request, clientType st
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println(err)
+		sugar.Error(err)
 		return
 	}
 	innerClient := &Client{

@@ -2,7 +2,7 @@ name: Docker Image Build & Publish
 
 on:
   push:
-    branches: [ master ]
+    branches: [ develop ]
 
 jobs:
   build:
@@ -13,40 +13,14 @@ jobs:
       id: filter
       with:
         filters: |
-          editor:
-            - 'clioude-editor/**/*'
-          server:
-            - 'clioude-server/**/*'
-          worker:
-            - 'clioude-worker/**/*'
-          kernel:
-            - 'clioude-kernel/**/*'
-          lsphub:
-            - 'clioude-lsphub/**/*'
+          hub:
+            - 'hub/**/*'
+          runner:
+            - 'runner/**/*'
     - name: login
       run: docker login docker.io -u ${{ secrets.HUB_USER }} -p ${{ secrets.HUB_PSWD }} 
-    - name: build editor
-      if: steps.filter.outputs.editor == 'true'
+    - name: build hub
+      if: steps.filter.outputs.hub == 'true'
       run: |
-        docker build clioude-editor --tag ${{ secrets.HUB_USER }}/clioude-editor:latest
-        docker push ${{ secrets.HUB_USER }}/clioude-editor:latest
-    - name: build server
-      if: steps.filter.outputs.server == 'true'
-      run: |
-        docker build clioude-server --tag ${{ secrets.HUB_USER }}/clioude-server:latest
-        docker push ${{ secrets.HUB_USER }}/clioude-server:latest
-    - name: build kernel
-      if: steps.filter.outputs.kernel == 'true'
-      run: |
-        docker build clioude-kernel --tag ${{ secrets.HUB_USER }}/clioude-kernel:latest
-        docker push ${{ secrets.HUB_USER }}/clioude-kernel:latest
-    - name: build worker
-      if: steps.filter.outputs.worker == 'true' || steps.filter.outputs.kernel == 'true'
-      run: |
-        docker build clioude-worker --tag ${{ secrets.HUB_USER }}/clioude-worker:latest
-        docker push ${{ secrets.HUB_USER }}/clioude-worker:latest
-    - name: build lsphub
-      if: steps.filter.outputs.lsphub == 'true'
-      run: |
-        docker build clioude-lsphub --tag ${{ secrets.HUB_USER }}/clioude-lsphub:latest
-        docker push ${{ secrets.HUB_USER }}/clioude-lsphub:latest
+        docker build hub --tag ${{ secrets.HUB_USER }}/clioude-hub:latest
+        docker push ${{ secrets.HUB_USER }}/clioude-hub:latest

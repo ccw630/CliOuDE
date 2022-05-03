@@ -1,8 +1,6 @@
 package main
 
 import (
-	"log"
-
 	"github.com/ccw630/clioude/hub/protocol"
 	"github.com/google/uuid"
 )
@@ -65,10 +63,10 @@ func (h *Hub) Run() {
 				}
 				h.languagedRunners[language][runner] = true
 			}
-			log.Println("Add runner to hub:", runner.id)
+			sugar.Info("Add runner to hub:", runner.id)
 		case runner := <-h.unregister:
 			if _, ok := h.runners[runner]; ok {
-				log.Println("Remove runner to hub:", runner.id)
+				sugar.Info("Remove runner to hub:", runner.id)
 				if runner.session != nil {
 					if runner.session.ioPump != nil {
 						runner.session.ioPump.closing <- true

@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"sync"
 
@@ -44,26 +43,26 @@ func (r *Runner) readPump() {
 	}()
 	r.init()
 	_, message, err := r.conn.ReadMessage()
-	log.Println("Received from runner:", message)
+	sugar.Debug("Received from runner:", message)
 	if err != nil {
 		if websocket.IsUnexpectedCloseError(err, websocket.CloseNoStatusReceived, websocket.CloseNormalClosure) {
-			log.Printf("error on initializing runner: %v", err)
+			sugar.Warnf("error on initializing runner: %v", err)
 		}
 		return
 	}
 	if err := json.Unmarshal(message, &r.conf); err != nil {
-		log.Printf("error on unmarshaling runner conf: %v", err)
+		sugar.Warnf("error on unmarshaling runner conf: %v", err)
 		return
 	}
-	log.Println("Received runner config:", r.conf)
+	sugar.Debug("Received runner config:", r.conf)
 	r.hub.register <- r
 	r.inputBarrier.Add(1)
 	for {
 		_, message, err := r.conn.ReadMessage()
-		log.Println("Received from runner:", message)
+		sugar.Debug("Received from runner:", message)
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseNoStatusReceived, websocket.CloseNormalClosure) {
-				log.Printf("error: %v", err)
+				sugar.Warnf("error: %v", err)
 			}
 			break
 		}
@@ -80,7 +79,7 @@ func (r *Runner) readPump() {
 		} else if flag == protocol.UsageInfo {
 			// usage metrics
 			usage := protocol.ParseUsage(message)
-			log.Println("Received usage info:", usage)
+			sugar.Debugf("Received usage info:", usage)
 			r.session.CpuTimesEstimate += float64(r.conf.CpuFrequency) * float64(r.session.lastCpuPercent+usage.CpuPercent) * (usage.Time - r.session.TimeElapsed) / 200
 			r.session.TimeElapsed = usage.Time
 			r.session.MemoryMaxUsed = max(r.session.MemoryMaxUsed, usage.Memory)
@@ -105,7 +104,7 @@ func ServeRunner(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Println(err)
+		sugar.Error(err)
 		return
 	}
 	runner := &Runner{
