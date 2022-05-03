@@ -141,7 +141,7 @@ function createSession() {
       outputEditor.write('\x1b[H\x1b[2J') // clear terminal
       io.onopen = () => {
         if (!!inputValue) {
-          io.send(inputValue)
+          io.send(inputValue+'')
         }
         outputListener = outputEditor.onData(data => {
           data = data.replaceAll("\r", "\n")
