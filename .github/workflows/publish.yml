@@ -24,3 +24,8 @@ jobs:
       run: |
         docker build hub --tag ${{ secrets.HUB_USER }}/clioude-hub:latest
         docker push ${{ secrets.HUB_USER }}/clioude-hub:latest
+    - name: build runner
+      if: steps.filter.outputs.runner == 'true'
+      run: |
+        docker build runner --tag ${{ secrets.HUB_USER }}/clioude-runner:latest
+        docker push ${{ secrets.HUB_USER }}/clioude-runner:latest
