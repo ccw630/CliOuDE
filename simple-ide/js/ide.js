@@ -1,3 +1,5 @@
+const HOST = 'localhost:8080'
+
 let sourceEditor, inputEditor, outputEditor
 let selectLanguageBtn, runBtn, vimCheckBox
 let statusLine
@@ -51,7 +53,7 @@ function getLanguages() {
     redirect: 'follow',
   }
 
-  fetch("http://localhost:8080/language", requestOptions)
+  fetch(`http://${HOST}/language`, requestOptions)
     .then(response => response.json())
     .then(languages => {
       let index, cppIndex
@@ -84,7 +86,7 @@ function getSession(id) {
     redirect: 'follow',
   }
 
-  fetch(`http://localhost:8080/session?id=${id}`, requestOptions)
+  fetch(`http://${HOST}/session?id=${id}`, requestOptions)
     .then(response => response.json())
     .then(result => {
       statusLine.innerHTML = `${result.time_elapsed.toFixed(2)}s, est. ${Math.ceil(result.cpu_times_estimate)} CPU times, ${result.memory_max_used} kB, ${statusLine.innerHTML}`
@@ -123,7 +125,7 @@ function createSession() {
 
   const timeStart = performance.now();
 
-  fetch("http://localhost:8080/session", requestOptions)
+  fetch(`http://${HOST}/session`, requestOptions)
     .then(response => {
       if (response.status !== 200) {
         return response.text()
@@ -137,16 +139,38 @@ function createSession() {
         return
       }
       const sessionId = result.session_id
-      const io = new WebSocket(`ws://localhost:8080/endpoint-io?session_id=${sessionId}`)
+      const io = new WebSocket(`ws://${HOST}/endpoint-io?session_id=${sessionId}`)
       outputEditor.write('\x1b[H\x1b[2J') // clear terminal
       io.onopen = () => {
         if (!!inputValue) {
           io.send(inputValue+'')
         }
+        let buffer = ''
         outputListener = outputEditor.onData(data => {
-          data = data.replaceAll("\r", "\n")
+          data = data.replaceAll("\r", "\n").replaceAll("\b", "")
+          if (data.length <= 3) {
+            const ord = data.charCodeAt(0)
+            if (ord == 0x1B) {
+              return
+            } else if (ord == 127 && buffer.length > 0) {
+              buffer = buffer.substring(0, buffer.length - 1)
+              outputEditor.write('\b \b')
+              return
+            } else if (ord < 32) {
+              if (ord == 3) {
+                io.send(data)
+                outputEditor.write('^'+String.fromCharCode(ord+64))
+              } else if (ord != 10) {
+                return
+              }
+            }
+          }
+          buffer += data
+          if (data[data.length - 1] === '\n') {
+            io.send(buffer)
+            buffer = ''
+          }
           outputEditor.write(data)
-          io.send(data)
         })
       }
       io.onmessage = (e) => {
@@ -157,7 +181,7 @@ function createSession() {
         reset()
       }
 
-      const st = new WebSocket(`ws://localhost:8080/endpoint-st?session_id=${sessionId}`)
+      const st = new WebSocket(`ws://${HOST}/endpoint-st?session_id=${sessionId}`)
       st.onmessage = (e) => {
         data = JSON.parse(e.data)
         if (data.type === 'status') {
@@ -179,7 +203,7 @@ function createSession() {
 }
 
 function appendOutput(output) {
-  outputEditor.write(output)
+  outputEditor.write("\033[0;90m"+output+"\033[0m")
 }
 
 function setEditorMode() {

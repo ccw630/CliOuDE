@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hub
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hub
+  template:
+    metadata:
+      labels:
+        app: hub
+    spec:
+      containers:
+      - image: ccw630/clioude-hub
+        name: hub
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: 125m
+            memory: 256Mi
+        imagePullPolicy: IfNotPresent
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hub
+spec:
+  ports:
+  - port: 8080
+  selector:
+    app: hub
+  type: LoadBalancer
+  externalTrafficPolicy: Local

@@ -1,0 +1,94 @@
+apiVersion: v1
+data:
+  languages.json: |
+    {
+        "C++" : {
+            "file": "main.cc",
+            "check_command": "g++ -v",
+            "prepare_command": "g++ -O2 -w -fmax-errors=3 -std=c++17 main.cc -lm -o ./main",
+            "run_command": "./main",
+            "idle_timeout": 60
+        },
+        "Python 3" : {
+            "file": "main.py",
+            "check_command": "python3 -VV",
+            "prepare_command": null,
+            "run_command": "python3 main.py",
+            "idle_timeout": 60
+        },
+        "Java": {
+            "file": "Main.java",
+            "check_command": "java -version",
+            "prepare_command": "javac Main.java",
+            "run_command": "java Main",
+            "idle_timeout": 60
+        }
+    }
+kind: ConfigMap
+metadata:
+  name: language-conf
+  selfLink: /api/v1/namespaces/default/configmaps/language-conf
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: runner
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: runner
+  template:
+    metadata:
+      labels:
+        app: runner
+    spec:
+      containers:
+      - image: ccw630/clioude-runner
+        name: runner
+        command: ["clioude-runner"]
+        args: ["ws://hub:8080/endpoint-r", "/runner/languages.json"]
+        resources:
+          requests:
+            cpu: 250m
+            memory: 256Mi
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          capabilities:
+            drop:
+            - SETPCAP
+            - MKNOD
+            - NET_BIND_SERVICE
+            - SYS_CHROOT
+            - SETFCAP
+            - FSETID
+        volumeMounts:
+        - mountPath: /runner
+          name: language-conf
+        - mountPath: /tmp
+          name: runner-tmpfs0
+      volumes:
+      - name: language-conf
+        configMap:
+          name: language-conf
+          items:
+          - key: languages.json
+            path: languages.json
+      - emptyDir:
+          medium: Memory
+        name: runner-tmpfs0
+      restartPolicy: Always
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: autoscale-runner
+  namespace: default
+spec:
+  maxReplicas: 10
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: runner
+  targetCPUUtilizationPercentage: 80
