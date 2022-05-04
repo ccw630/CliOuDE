@@ -8,6 +8,7 @@ use std::io::prelude::*;
 use std::process::Stdio;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::thread;
 use std::time::SystemTime;
 use sysinfo::{ProcessExt, ProcessorExt, Signal, System, SystemExt};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -20,21 +21,23 @@ use url::Url;
 async fn main() {
     let connect_addr = env::args()
         .nth(1)
-        .unwrap_or_else(|| panic!("this program requires at least one argument"));
-    let language_conf_path = env::args().nth(2).unwrap_or("languages.json".to_string());
+        .unwrap_or("ws://localhost:8080/endpoint-r".to_string());
+    let language_conf_path = env::args().nth(2).unwrap_or("etc/languages.json".to_string());
 
     let url = Url::parse(&connect_addr).unwrap();
-    // loop {
-    let mut runner = Run::new(&language_conf_path);
-    match runner.run(&url).await {
-        Ok(_) => (),
-        Err(err) => {
-            runner.cleanup();
-            println!("FATAL: Run {} ERROR {:?}", runner.id, err);
+    loop {
+        println!("INFO: Initializing runner...");
+        let mut runner = Run::new(&language_conf_path);
+        match runner.run(&url).await {
+            Ok(status) => println!("INFO: Run {} exit status: {:?}", runner.id, status),
+            Err(err) => {
+                runner.cleanup();
+                println!("FATAL: Run {} ERROR {:?}", runner.id, err);
+                thread::sleep(Duration::from_secs(5));
+            }
         }
-    }
 
-    // }
+    }
 }
 
 struct Run {
@@ -174,6 +177,7 @@ impl Run {
                                     0xe8,
                                 ]))
                                 .await?;
+                            ws_writer.close().await.unwrap();
                             return Ok(ExitStatus::PrepareError);
                         }
                     }
@@ -182,6 +186,7 @@ impl Run {
                             .send(Message::binary(vec![RunStatus::TimedOut as u8, 0xe7]))
                             .await?;
                         self.cleanup();
+                        ws_writer.close().await.unwrap();
                         return Ok(ExitStatus::PrepareInterrupted);
                     }
                 },
@@ -303,7 +308,10 @@ impl Run {
                 let last = data.last().unwrap().clone();
                 match ws_writer.send(Message::binary(data)).await {
                     Ok(_) => (),
-                    Err(err) => println!("FATAL: {:?} at send message", err),
+                    Err(err) => {
+                        println!("FATAL: {:?} at send message", err);
+                        break;
+                    },
                 };
                 if last == 0xe8u8 {
                     // ws_writer.send(Message::Close(Some(CloseFrame {
@@ -375,6 +383,7 @@ fn get_current_timestamp() -> u64 {
         .as_secs()
 }
 
+#[derive(Serialize, Deserialize, Debug)]
 enum ExitStatus {
     StartInterrupted,
     PrepareError,

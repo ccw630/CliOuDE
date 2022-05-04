@@ -77,13 +77,13 @@ func handleSession(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	}
 
 	languagedRunners, ok := hub.languagedRunners[params.Language]
-	if !ok || len(languagedRunners) == 0 {
+	if !ok {
 		w.WriteHeader(400)
 		fmt.Fprintf(w, "Language not supported")
 		return
 	}
 
-	for runner := range hub.languagedRunners[params.Language] {
+	for runner := range languagedRunners {
 		if runner.session == nil {
 
 			w.WriteHeader(200)

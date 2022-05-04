@@ -35,6 +35,7 @@ type Client struct {
 	closing     chan bool
 	messageType int
 	clientType  string
+	logId       string
 }
 
 type IClient interface {
@@ -67,13 +68,13 @@ func (c *IOPump) readPump() {
 	c.hub.connect <- c
 	for {
 		_, message, err := c.conn.ReadMessage()
-		sugar.Debugf("Received from %s: %v", c.clientType, message)
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseNoStatusReceived, websocket.CloseNormalClosure) {
-				sugar.Warnf("error: %v", err)
+				sugar.Warnf("io pump(%s) error: %v", c.logId, err)
 			}
 			break
 		}
+		sugar.Debugf("Received from %s(%s): %v", c.clientType, c.logId, string(message))
 		c.runner.inputBarrier.Wait()
 		c.runner.send <- protocol.InputMessage(message)
 	}
@@ -89,13 +90,13 @@ func (c *StatusPump) readPump() {
 	c.hub.listen <- c
 	for {
 		_, message, err := c.conn.ReadMessage()
-		sugar.Debugf("Received from %s: %v", c.clientType, message)
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseNoStatusReceived, websocket.CloseNormalClosure) {
-				sugar.Warnf("error: %v", err)
+				sugar.Warnf("status pump(%s) error: %v", c.logId, err)
 			}
 			break
 		}
+		sugar.Debugf("Received from %s(%s): %v", c.clientType, c.logId, string(message))
 	}
 }
 
@@ -108,20 +109,7 @@ func (c *Client) writePump() {
 	for {
 		select {
 		case message, ok := <-c.send:
-			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
-			if !ok {
-				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
-				return
-			}
-
-			w, err := c.conn.NextWriter(c.messageType)
-			if err != nil {
-				return
-			}
-			sugar.Debugf("Send to %s: %v", c.clientType, message)
-			w.Write(message)
-
-			if err := w.Close(); err != nil {
+			if c.write(message, ok) {
 				return
 			}
 		case <-ticker.C:
@@ -130,9 +118,39 @@ func (c *Client) writePump() {
 				return
 			}
 		case <-c.closing:
+		priority:
+			for {
+				select {
+				case message, ok := <-c.send:
+					if c.write(message, ok) {
+						return
+					}
+				default:
+					break priority
+				}
+			}
 			return
 		}
 	}
+}
+
+func (c *Client) write(message []byte, ok bool) bool {
+	c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+	if !ok {
+		c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+		return true
+	}
+
+	w, err := c.conn.NextWriter(c.messageType)
+	if err != nil {
+		return true
+	}
+	sugar.Debugf("Send to %s(%s): %v", c.clientType, c.logId, string(message))
+	w.Write(message)
+	if err := w.Close(); err != nil {
+		return true
+	}
+	return false
 }
 
 func ServeClient(hub *Hub, w http.ResponseWriter, r *http.Request, clientType string) {
@@ -161,6 +179,7 @@ func ServeClient(hub *Hub, w http.ResponseWriter, r *http.Request, clientType st
 		closing:     make(chan bool),
 		messageType: websocket.TextMessage,
 		clientType:  clientType,
+		logId:       sessionId,
 	}
 	var client IClient
 	if clientType == "io" {

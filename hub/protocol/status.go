@@ -14,3 +14,7 @@ const (
 var statuses = [6]string{
 	"Running", "Preparing", "Prepare Error", "Ok", "Runtime Error", "Timed Out",
 }
+
+func GetStatusDesc(status byte) string {
+	return statuses[status]
+}

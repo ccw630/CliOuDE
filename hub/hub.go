@@ -56,6 +56,7 @@ func (h *Hub) Run() {
 		case runner := <-h.register:
 			id := uuid.New().String()
 			runner.id = id
+			runner.logId = runner.id
 			h.runners[runner] = true
 			for language := range runner.conf.AvailableLanguages {
 				if _, ok := h.languagedRunners[language]; !ok {

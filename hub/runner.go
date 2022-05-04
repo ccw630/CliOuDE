@@ -43,26 +43,24 @@ func (r *Runner) readPump() {
 	}()
 	r.init()
 	_, message, err := r.conn.ReadMessage()
-	sugar.Debug("Received from runner:", message)
 	if err != nil {
 		if websocket.IsUnexpectedCloseError(err, websocket.CloseNoStatusReceived, websocket.CloseNormalClosure) {
 			sugar.Warnf("error on initializing runner: %v", err)
 		}
 		return
 	}
+	sugar.Debug("Received from new runner: ", string(message))
 	if err := json.Unmarshal(message, &r.conf); err != nil {
 		sugar.Warnf("error on unmarshaling runner conf: %v", err)
 		return
 	}
-	sugar.Debug("Received runner config:", r.conf)
 	r.hub.register <- r
 	r.inputBarrier.Add(1)
 	for {
 		_, message, err := r.conn.ReadMessage()
-		sugar.Debug("Received from runner:", message)
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseNoStatusReceived, websocket.CloseNormalClosure) {
-				sugar.Warnf("error: %v", err)
+				sugar.Warnf("runner(%s) error: %v", r.logId, err)
 			}
 			break
 		}
@@ -73,23 +71,26 @@ func (r *Runner) readPump() {
 			}
 			status := message[0]
 			r.session.CurrentStatus = protocol.RunStatus(status)
+			sugar.Debugf("Received status from runner(%s): %v", r.logId, protocol.GetStatusDesc(status))
 			if r.session.statusPump != nil {
 				r.session.statusPump.send <- protocol.ParseStatus(status)
 			}
 		} else if flag == protocol.UsageInfo {
 			// usage metrics
 			usage := protocol.ParseUsage(message)
-			sugar.Debugf("Received usage info:", usage)
+			sugar.Debugf("Received usage info from runner(%s): %v", r.logId, usage)
 			r.session.CpuTimesEstimate += float64(r.conf.CpuFrequency) * float64(r.session.lastCpuPercent+usage.CpuPercent) * (usage.Time - r.session.TimeElapsed) / 200
 			r.session.TimeElapsed = usage.Time
 			r.session.MemoryMaxUsed = max(r.session.MemoryMaxUsed, usage.Memory)
 			r.session.lastCpuPercent = usage.CpuPercent
 		} else if flag == protocol.ExitInfo {
 			r.session.ExitCode = message[0]
+			sugar.Debugf("Received exit code %v from runner(%s)", r.session.ExitCode, r.logId)
 			if r.session.statusPump != nil {
 				r.session.statusPump.send <- protocol.ParseExitCode(message)
 			}
 		} else {
+			sugar.Debugf("Received from runner(%s): %v", r.logId, string(message))
 			if r.session.ioPump == nil {
 				r.buffer <- message
 			} else {

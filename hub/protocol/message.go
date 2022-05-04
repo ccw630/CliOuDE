@@ -16,7 +16,7 @@ func ParseMessage(message []byte) (ControlFlag, []byte) {
 }
 
 func ParseStatus(status byte) []byte {
-	res, _ := json.Marshal(StatusMessage{Type: "status", Desc: statuses[status]})
+	res, _ := json.Marshal(StatusMessage{Type: "status", Desc: GetStatusDesc(status)})
 	return res
 }
 
