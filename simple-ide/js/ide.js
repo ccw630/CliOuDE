@@ -157,7 +157,7 @@ function createSession() {
               outputEditor.write('\b \b')
               return
             } else if (ord < 32) {
-              if (ord == 3) {
+              if (ord == 3 || ord == 26 || ord == 28) {
                 io.send(data)
                 outputEditor.write('^'+String.fromCharCode(ord+64))
               } else if (ord != 10) {

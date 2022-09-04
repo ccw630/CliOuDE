@@ -325,7 +325,9 @@ impl Run {
         while let Some(message) = ws_reader.next().await {
             match message {
                 Ok(message) => {
-                    *timeout.lock().unwrap() = get_current_timestamp() + idle_timeout;
+                    if !message.is_ping() {
+                        *timeout.lock().unwrap() = get_current_timestamp() + idle_timeout;
+                    }
                     let mut data = message.into_data();
                     match data.pop() {
                         Some(0xe0u8) => {
